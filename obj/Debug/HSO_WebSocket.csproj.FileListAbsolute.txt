@@ -1,0 +1,10 @@
+D:\Unity project\HSO_WebSocket\bin\Debug\HSO_WebSocket.exe.config
+D:\Unity project\HSO_WebSocket\bin\Debug\HSO_WebSocket.exe
+D:\Unity project\HSO_WebSocket\bin\Debug\HSO_WebSocket.pdb
+D:\Unity project\HSO_WebSocket\bin\Debug\Newtonsoft.Json.dll
+D:\Unity project\HSO_WebSocket\bin\Debug\Newtonsoft.Json.xml
+D:\Unity project\HSO_WebSocket\obj\Debug\HSO_WebSocket.csproj.AssemblyReference.cache
+D:\Unity project\HSO_WebSocket\obj\Debug\HSO_WebSocket.csproj.CoreCompileInputs.cache
+D:\Unity project\HSO_WebSocket\obj\Debug\HSO_WebS.68D4A671.Up2Date
+D:\Unity project\HSO_WebSocket\obj\Debug\HSO_WebSocket.exe
+D:\Unity project\HSO_WebSocket\obj\Debug\HSO_WebSocket.pdb
