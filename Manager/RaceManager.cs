@@ -8,9 +8,8 @@ using System.Threading.Tasks;
 public sealed class RaceManager
 {
     private static readonly Lazy<RaceManager> lazyInstance = new Lazy<RaceManager>(() => new RaceManager());
+    private readonly Dictionary<WebSocket, SemaphoreSlim> socketSendLocks = new Dictionary<WebSocket, SemaphoreSlim>();
 
-    //Tìm bug
-    private readonly Dictionary<WebSocket, int> socketSendCounter = new Dictionary<WebSocket, int>();
 
     public static RaceManager Instance => lazyInstance.Value;
 
@@ -36,6 +35,7 @@ public sealed class RaceManager
             if (!connectedClients.Contains(webSocket))
             {
                 connectedClients.Add(webSocket);
+                socketSendLocks[webSocket] = new SemaphoreSlim(1, 1);
             }
         }
     }
@@ -48,7 +48,12 @@ public sealed class RaceManager
         {
             connectedClients.Remove(webSocket);
             clientAccountMapping.Remove(webSocket);
-            socketSendCounter.Remove(webSocket);
+
+            if (socketSendLocks.TryGetValue(webSocket, out var semaphore))
+            {
+                semaphore.Dispose();
+                socketSendLocks.Remove(webSocket);
+            }
         }
     }
 
@@ -90,10 +95,8 @@ public sealed class RaceManager
         if (string.IsNullOrEmpty(packet))
             return;
 
-        byte[] packetBytes = Encoding.UTF8.GetBytes(packet);
         List<WebSocket> snapshot = CreateClientSnapshot();
-
-        List<Task> sendTasks = new List<Task>();
+        List<Task> tasks = new List<Task>();
 
         foreach (WebSocket client in snapshot)
         {
@@ -102,11 +105,15 @@ public sealed class RaceManager
 
             if (client.State == WebSocketState.Open)
             {
-                sendTasks.Add(client.SendAsync(new ArraySegment<byte>(packetBytes), WebSocketMessageType.Text, true, CancellationToken.None));
+                tasks.Add(SendPacketToClientAsync(client, packet)
+                    .ContinueWith(t =>
+                        {
+                            if (t.Exception != null)
+                                Console.WriteLine("[BROADCAST ERROR] " + t.Exception.InnerException);
+                        }));
             }
         }
-
-        await Task.WhenAll(sendTasks);
+        await Task.WhenAll(tasks);
     }
     public async Task SendPacketToClientAsync(WebSocket targetClient, string packet)
     {
@@ -119,13 +126,13 @@ public sealed class RaceManager
         if (string.IsNullOrEmpty(packet))
             return;
 
+        SemaphoreSlim sendLock;
         lock (clientCollectionLock)
         {
-            if (!socketSendCounter.ContainsKey(targetClient))
-                socketSendCounter[targetClient] = 0;
-
-            socketSendCounter[targetClient]++;
+            if (!socketSendLocks.TryGetValue(targetClient, out sendLock))
+                return;
         }
+        await sendLock.WaitAsync();
 
         try
         {
@@ -136,14 +143,11 @@ public sealed class RaceManager
         catch (Exception ex)
         {
             Console.WriteLine("[SEND ERROR] " + ex.ToString());
-            throw;
+            UnregisterClient(targetClient);
         }
-        finally
-        {
-            lock (clientCollectionLock)
-            {
-                socketSendCounter[targetClient]--;
-            }
+        finally 
+        { 
+            sendLock.Release();  
         }
     }
 
@@ -151,7 +155,20 @@ public sealed class RaceManager
     {
         lock (clientCollectionLock)
         {
-            connectedClients.RemoveAll(socket => socket == null || socket.State != WebSocketState.Open);
+            foreach (var socket in new List<WebSocket>(connectedClients))
+            {
+                if (socket == null || socket.State != WebSocketState.Open)
+                {
+                    connectedClients.Remove(socket);
+                    clientAccountMapping.Remove(socket);
+
+                    if (socketSendLocks.TryGetValue(socket, out var semaphore))
+                    {
+                        semaphore.Dispose();
+                        socketSendLocks.Remove(socket);
+                    }
+                }
+            }
         }
     }
 }

@@ -63,7 +63,7 @@ public class LogInController
         }
 
         string packet = JsonConvert.SerializeObject(loginResult);
-        RaceManager.Instance.SendPacketToClientAsync(socket, packet);
+        await RaceManager.Instance.SendPacketToClientAsync(socket, packet);
         RaceManager.Instance.BindAccountToClient(socket, idAcc);
     }
 

@@ -127,6 +127,6 @@ class RegisterController
         }
 
         string packet = JsonConvert.SerializeObject(registerResult);
-        RaceManager.Instance.SendPacketToClientAsync(socket, packet);
+        await RaceManager.Instance.SendPacketToClientAsync(socket, packet);
     }
 }

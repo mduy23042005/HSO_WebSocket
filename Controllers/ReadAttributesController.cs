@@ -86,7 +86,7 @@ class ReadAttributesController
             }
 
             string packet = JsonConvert.SerializeObject(equipmentResult);
-            RaceManager.Instance.SendPacketToClientAsync(socket, packet);
+            await RaceManager.Instance.SendPacketToClientAsync(socket, packet);
         }
         catch (System.Exception ex)
         {
@@ -129,7 +129,7 @@ class ReadAttributesController
             }
 
             string packet = JsonConvert.SerializeObject(inventoryResult);
-            RaceManager.Instance.SendPacketToClientAsync(socket, packet);
+            await RaceManager.Instance.SendPacketToClientAsync(socket, packet);
         }
         catch (System.Exception ex)
         {
