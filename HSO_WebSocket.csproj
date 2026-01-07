@@ -49,6 +49,7 @@
     <Compile Include="Controllers\EquipmentController.cs" />
     <Compile Include="Controllers\InventoryController.cs" />
     <Compile Include="Controllers\LogInController.cs" />
+    <Compile Include="Controllers\MobsController.cs" />
     <Compile Include="Controllers\ReadAttributesController.cs" />
     <Compile Include="Controllers\RegisterController.cs" />
     <Compile Include="Manager\RaceManager.cs" />

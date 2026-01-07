@@ -47,7 +47,7 @@ class EquipmentController
             }
 
             string packet = JsonConvert.SerializeObject(equipmentResult);
-            await RaceManager.Instance.SendPacketToClientAsync(socket, packet);
+            await RaceManager.Instance.SendPacketToClient(socket, packet);
         }
         catch (System.Exception ex)
         {
@@ -81,7 +81,7 @@ class EquipmentController
             }
 
             string packet = JsonConvert.SerializeObject(equipmentResult);
-            await RaceManager.Instance.SendPacketToClientAsync(socket, packet);
+            await RaceManager.Instance.SendPacketToClient(socket, packet);
         }
         catch (System.Exception ex)
         {

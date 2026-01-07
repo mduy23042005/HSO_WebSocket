@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Net;
 using System.Net.WebSockets;
@@ -11,10 +12,13 @@ class WebSocketServerManager
     static async Task Main(string[] args)
     {
         HttpListener listener = new HttpListener();
-        listener.Prefixes.Add("https://localhost:55556/");
+        listener.Prefixes.Add("http://+:55556/");
         listener.Start();
-        Console.WriteLine("Web Socket Server started at wss://localhost:55556/");
+        Console.WriteLine("Web Socket Server started at ws://+:55556/");
         await WebAPIManager.Instance.TestAPI();
+        // 
+        var cts = new CancellationTokenSource();
+        _ = StartCleanupLoop(cts.Token);
 
         while (true)
         {
@@ -33,6 +37,23 @@ class WebSocketServerManager
                 // Nếu không phải WebSocket thì trả về 400
                 context.Response.StatusCode = 400;
                 context.Response.Close();
+            }
+        }
+    }
+    static async Task StartCleanupLoop(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            RaceManager.Instance.RemoveDisconnectedClients();
+
+            try
+            {
+                await Task.Delay(1000, token);
+            }
+            catch (TaskCanceledException)
+            {
+                // server shutdown
+                break;
             }
         }
     }
@@ -68,20 +89,22 @@ class WebSocketServerManager
         }
         finally
         {
-            RaceManager.Instance.UnregisterClient(socket);
-            socket.Dispose();
+            if (socket.State != WebSocketState.Closed)
+            {
+                RaceManager.Instance.MarkLogOut(socket);
+            }
         }
     }
 
     public static async Task ReceivePacketFromClient(WebSocket socket, string json)
     {
-        dynamic basePacket = JsonConvert.DeserializeObject(json);
-        string cmd = basePacket.cmd;
+        JObject basePacket = JObject.Parse(json);
+        string cmd = basePacket["cmd"]?.ToString();
 
         switch (cmd)
         {
             case "syncData":
-                await RaceManager.Instance.SendPacketToAllClientsAsync(json, socket);
+                await RaceManager.Instance.SendPacketToAllClients(json, socket);
                 break;
 
             case "login":
@@ -89,11 +112,11 @@ class WebSocketServerManager
                 var loginController = new LogInController();
                 loginController.ClickLogIn(socket, loginPacket.username, loginPacket.password);
                 break;
-            // từ từ làm tiếp
             case "logout":
-                await RaceManager.Instance.SendPacketToAllClientsAsync(json, socket);
-                Console.WriteLine($"Received log out packet: {json}");
-                break;
+                await RaceManager.Instance.SendPacketToAllClients(json, socket);
+                await RaceManager.Instance.SendPacketToClient(socket, json);
+                RaceManager.Instance.MarkLogOut(socket);
+                return;
 
             case "register":
                 var registerPacket = JsonConvert.DeserializeObject<RegisterRequestPacket>(json);
@@ -138,7 +161,6 @@ class WebSocketServerManager
                 break;
 
             default:
-                //Tạm thời không làm gì với các packet khác
                 break;
         }
     }

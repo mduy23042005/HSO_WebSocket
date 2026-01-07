@@ -51,7 +51,7 @@ class InventoryController
             }
 
             string packet = JsonConvert.SerializeObject(inventoryResult);
-            await RaceManager.Instance.SendPacketToClientAsync(socket, packet);
+            await RaceManager.Instance.SendPacketToClient(socket, packet);
         }
         catch (System.Exception ex)
         {

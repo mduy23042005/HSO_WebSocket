@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Text;
@@ -9,7 +10,7 @@ public sealed class RaceManager
 {
     private static readonly Lazy<RaceManager> lazyInstance = new Lazy<RaceManager>(() => new RaceManager());
     private readonly Dictionary<WebSocket, SemaphoreSlim> socketSendLocks = new Dictionary<WebSocket, SemaphoreSlim>();
-
+    private readonly HashSet<WebSocket> logoutSockets = new HashSet<WebSocket>();
 
     public static RaceManager Instance => lazyInstance.Value;
 
@@ -90,7 +91,7 @@ public sealed class RaceManager
         }
     }
 
-    public async Task SendPacketToAllClientsAsync(string packet, WebSocket excludedClient = null)
+    public async Task SendPacketToAllClients(string packet, WebSocket excludedClient = null)
     {
         if (string.IsNullOrEmpty(packet))
             return;
@@ -103,19 +104,24 @@ public sealed class RaceManager
             if (client == excludedClient)
                 continue;
 
-            if (client.State == WebSocketState.Open)
+            if (client.State != WebSocketState.Open)
+                continue;
+
+            try
             {
-                tasks.Add(SendPacketToClientAsync(client, packet)
-                    .ContinueWith(t =>
-                        {
-                            if (t.Exception != null)
-                                Console.WriteLine("[BROADCAST ERROR] " + t.Exception.InnerException);
-                        }));
+                await SendPacketToClient(client, packet);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[BROADCAST ERROR] " + ex.Message);
+                MarkLogOut(client);
             }
         }
+
         await Task.WhenAll(tasks);
     }
-    public async Task SendPacketToClientAsync(WebSocket targetClient, string packet)
+
+    public async Task SendPacketToClient(WebSocket targetClient, string packet)
     {
         if (targetClient == null)
             return;
@@ -151,24 +157,62 @@ public sealed class RaceManager
         }
     }
 
-    public void RemoveDisconnectedClients()
+    public void MarkLogOut(WebSocket socket)
     {
+        if (socket == null)
+            return;
+
         lock (clientCollectionLock)
         {
-            foreach (var socket in new List<WebSocket>(connectedClients))
-            {
-                if (socket == null || socket.State != WebSocketState.Open)
-                {
-                    connectedClients.Remove(socket);
-                    clientAccountMapping.Remove(socket);
+            logoutSockets.Add(socket);
+        }
+    }
 
-                    if (socketSendLocks.TryGetValue(socket, out var semaphore))
-                    {
-                        semaphore.Dispose();
-                        socketSendLocks.Remove(socket);
-                    }
+    public void RemoveDisconnectedClients()
+    {
+        List<WebSocket> needCleanup = new List<WebSocket>();
+
+        lock (clientCollectionLock)
+        {
+            foreach (var socket in connectedClients)
+            {
+                if (socket == null)
+                {
+                    needCleanup.Add(socket);
+                    continue;
+                }
+
+                // logout chủ động
+                if (logoutSockets.Contains(socket))
+                {
+                    needCleanup.Add(socket);
+                    continue;
+                }
+
+                // disconnect bất ngờ
+                if (socket.State != WebSocketState.Open)
+                {
+                    needCleanup.Add(socket);
                 }
             }
+        }
+
+        foreach (var socket in needCleanup)
+        {
+            if (socket == null)
+                continue;
+
+            UnregisterClient(socket);
+
+            if (socket.State == WebSocketState.Open || socket.State == WebSocketState.CloseReceived)
+            {
+                try
+                {
+                    socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Logout", CancellationToken.None).Wait();
+                }
+                catch { }
+            }
+            socket.Dispose();
         }
     }
 }

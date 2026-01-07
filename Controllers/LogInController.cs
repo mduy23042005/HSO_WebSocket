@@ -21,6 +21,12 @@ class LogInResultPacket
     public int hair;
 }
 
+class LogOutRequestPacket
+{
+    public string cmd;
+    public int idAccount;
+}
+
 public class LogInController
 {
     private static int idAcc;
@@ -63,7 +69,7 @@ public class LogInController
         }
 
         string packet = JsonConvert.SerializeObject(loginResult);
-        await RaceManager.Instance.SendPacketToClientAsync(socket, packet);
+        await RaceManager.Instance.SendPacketToClient(socket, packet);
         RaceManager.Instance.BindAccountToClient(socket, idAcc);
     }
 
