@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Unity project\\HSO_WebSocket\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{2574B21C-0FB7-4A03-84BB-2AC9CFD251FC}|HSO_WebSocket.csproj|d:\\unity project\\hso_websocket\\manager\\websocketservermanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2574B21C-0FB7-4A03-84BB-2AC9CFD251FC}|HSO_WebSocket.csproj|solutionrelative:manager\\websocketservermanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "WebSocketServerManager.cs",
+              "DocumentMoniker": "D:\\Unity project\\HSO_WebSocket\\Manager\\WebSocketServerManager.cs",
+              "RelativeDocumentMoniker": "Manager\\WebSocketServerManager.cs",
+              "ToolTip": "D:\\Unity project\\HSO_WebSocket\\Manager\\WebSocketServerManager.cs",
+              "RelativeToolTip": "Manager\\WebSocketServerManager.cs",
+              "ViewState": "AgIAAB8AAAAAAAAAAAAYwCkAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-07T08:25:27.564Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

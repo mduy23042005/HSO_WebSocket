@@ -28,7 +28,8 @@ class WebSocketServerManager
             if (context.Request.IsWebSocketRequest)
             {
                 HttpListenerWebSocketContext wsContext = await context.AcceptWebSocketAsync(null);
-                Console.WriteLine("New client connected!");
+                string clientIP = context.Request.RemoteEndPoint?.ToString() ?? "Unknown";
+                Console.WriteLine($"New client connected! IP: {clientIP}");
                 RaceManager.Instance.RegisterClient(wsContext.WebSocket);
                 _ = HandleClient(wsContext.WebSocket);
             }
@@ -40,6 +41,7 @@ class WebSocketServerManager
             }
         }
     }
+
     static async Task StartCleanupLoop(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
@@ -110,7 +112,7 @@ class WebSocketServerManager
             case "login":
                 var loginPacket = JsonConvert.DeserializeObject<LogInRequestPacket>(json);
                 var loginController = new LogInController();
-                loginController.ClickLogIn(socket, loginPacket.username, loginPacket.password);
+                await loginController.ClickLogIn(socket, loginPacket.username, loginPacket.password);
                 break;
             case "logout":
                 await RaceManager.Instance.SendPacketToAllClients(json, socket);
@@ -121,7 +123,7 @@ class WebSocketServerManager
             case "register":
                 var registerPacket = JsonConvert.DeserializeObject<RegisterRequestPacket>(json);
                 var registerController = new RegisterController();
-                registerController.ClickRegister(socket, registerPacket.idSchool, registerPacket.username, registerPacket.password, registerPacket.nameChar, registerPacket.hair, registerPacket.blessingPoints);
+                await registerController.ClickRegister(socket, registerPacket.idSchool, registerPacket.username, registerPacket.password, registerPacket.nameChar, registerPacket.hair, registerPacket.blessingPoints);
                 break;
 
             case "equipment":

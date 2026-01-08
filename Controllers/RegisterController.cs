@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
 using System;
+using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net.WebSockets;
 
@@ -21,7 +22,7 @@ public class RegisterResultPacket
 }
 class RegisterController
 {
-    public async void ClickRegister(WebSocket socket, int idSchool, string username, string password, string nameChar, int hair, int blessingPoints)
+    public async Task ClickRegister(WebSocket socket, int idSchool, string username, string password, string nameChar, int hair, int blessingPoints)
     {
         int weapon = 0, helmet = 0, armor = 0, legArmor = 0;
         switch (idSchool)

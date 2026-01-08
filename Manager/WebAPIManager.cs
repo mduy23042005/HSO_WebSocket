@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 public class WebAPIManager
 {
     private readonly HttpClient client = new HttpClient();
-    private const string apiUrl = "https://localhost:55555";
+    private const string apiUrl = "http://localhost:55555";
     
     public static WebAPIManager Instance { get; } = new WebAPIManager();
 
@@ -26,7 +26,7 @@ public class WebAPIManager
 
             if (response.IsSuccessStatusCode)
             {
-                Console.WriteLine("Web API Database started at https://localhost:55555/");
+                Console.WriteLine("Web API Database started at http://localhost:55555/");
             }
             else
             {

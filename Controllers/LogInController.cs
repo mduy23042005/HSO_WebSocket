@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Threading.Tasks;
 using System.Net.WebSockets;
 using System.Net.Http;
 
@@ -31,7 +32,7 @@ public class LogInController
 {
     private static int idAcc;
 
-    public async void ClickLogIn(WebSocket socket, string username, string password)
+    public async Task ClickLogIn(WebSocket socket, string username, string password)
     {
         LogInResultPacket loginResult;
 
