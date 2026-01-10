@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Text;
@@ -68,18 +67,14 @@ public sealed class RaceManager
             clientAccountMapping[webSocket] = idAccount;
         }
     }
-    public bool TryGetIDAccount(WebSocket webSocket, out int idAccount)
+    public int GetIDAccount(WebSocket socket)
     {
+        if (socket == null)
+            return 0;
+
         lock (clientCollectionLock)
         {
-            return clientAccountMapping.TryGetValue(webSocket, out idAccount);
-        }
-    }
-    public int GetConnectedClientCount()
-    {
-        lock (clientCollectionLock)
-        {
-            return connectedClients.Count;
+            return clientAccountMapping.TryGetValue(socket, out var idAccount) ? idAccount : 0;
         }
     }
 
@@ -106,21 +101,22 @@ public sealed class RaceManager
 
             if (client.State != WebSocketState.Open)
                 continue;
-
-            try
+            tasks.Add(Task.Run(async () =>
             {
-                await SendPacketToClient(client, packet);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("[BROADCAST ERROR] " + ex.Message);
-                MarkLogOut(client);
-            }
+                try
+                {
+                    await SendPacketToClient(client, packet);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("[BROADCAST ERROR] " + ex.Message);
+                    MarkLogOut(client);
+                }
+            }));
         }
 
         await Task.WhenAll(tasks);
     }
-
     public async Task SendPacketToClient(WebSocket targetClient, string packet)
     {
         if (targetClient == null)
@@ -138,22 +134,38 @@ public sealed class RaceManager
             if (!socketSendLocks.TryGetValue(targetClient, out sendLock))
                 return;
         }
-        await sendLock.WaitAsync();
 
         try
         {
+            await sendLock.WaitAsync();
+            if (targetClient.State != WebSocketState.Open)
+                return;
+
             byte[] packetBytes = Encoding.UTF8.GetBytes(packet);
 
             await targetClient.SendAsync(new ArraySegment<byte>(packetBytes), WebSocketMessageType.Text, true, CancellationToken.None);
         }
+        catch (ObjectDisposedException)
+        {
+            MarkLogOut(targetClient);
+        }
+        catch (WebSocketException ex)
+        {
+            Console.WriteLine("[SEND WS ERROR] " + ex.Message);
+            MarkLogOut(targetClient);
+        }
         catch (Exception ex)
         {
-            Console.WriteLine("[SEND ERROR] " + ex.ToString());
-            UnregisterClient(targetClient);
+            Console.WriteLine("[SEND ERROR] " + ex);
+            MarkLogOut(targetClient);
         }
-        finally 
-        { 
-            sendLock.Release();  
+        finally
+        {
+            try
+            {
+                sendLock.Release();
+            }
+            catch { }
         }
     }
 

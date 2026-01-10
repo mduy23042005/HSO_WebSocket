@@ -22,7 +22,8 @@ class EquipmentController
 {
     public async Task ReadDatabaseEquipment(WebSocket socket)
     {
-        int idAccount = LogInController.GetIDAccount() ?? 0;
+        int idAccount = RaceManager.Instance.GetIDAccount(socket);
+
         string urlItems = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/equipment?idAccount={idAccount}";
 
         List<EquipmentResultPacket> equipmentResult;
@@ -56,7 +57,8 @@ class EquipmentController
     }
     public async Task ReadDatabaseOutfitSprites(WebSocket socket)
     {
-        int idAccount = LogInController.GetIDAccount() ?? 0;
+        int idAccount = RaceManager.Instance.GetIDAccount(socket);
+
         string urlItems = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/equipment?idAccount={idAccount}";
 
         List<EquipmentResultPacket> equipmentResult;

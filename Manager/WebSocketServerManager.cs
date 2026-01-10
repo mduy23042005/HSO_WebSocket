@@ -62,23 +62,40 @@ class WebSocketServerManager
 
     static async Task HandleClient(WebSocket socket)
     {
-        var buffer = new byte[2048];
+        var buffer = new byte[4096];
+        var messageBuffer = new StringBuilder();
 
         try
         {
             while (socket.State == WebSocketState.Open)
             {
-                var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                WebSocketReceiveResult result;
 
-                if (result.MessageType == WebSocketMessageType.Close)
+                do
                 {
-                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
-                    break;
-                }
+                    result = await socket.ReceiveAsync(
+                        new ArraySegment<byte>(buffer),
+                        CancellationToken.None
+                    );
 
-                string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        await socket.CloseAsync(
+                            WebSocketCloseStatus.NormalClosure,
+                            "Closing",
+                            CancellationToken.None
+                        );
+                        return;
+                    }
 
-                await ReceivePacketFromClient(socket, message);
+                    messageBuffer.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+
+                } while (!result.EndOfMessage);
+
+                string fullMessage = messageBuffer.ToString();
+                messageBuffer.Clear();
+
+                await ReceivePacketFromClient(socket, fullMessage);
             }
         }
         catch (WebSocketException wsex)
@@ -100,70 +117,90 @@ class WebSocketServerManager
 
     public static async Task ReceivePacketFromClient(WebSocket socket, string json)
     {
-        JObject basePacket = JObject.Parse(json);
-        string cmd = basePacket["cmd"]?.ToString();
-
-        switch (cmd)
+        try
         {
-            case "syncData":
-                await RaceManager.Instance.SendPacketToAllClients(json, socket);
-                break;
+            var token = JToken.Parse(json);
+            string cmd = null;
+            switch (token.Type)
+            {
+                case JTokenType.Object:
+                    cmd = token["cmd"]?.ToString();
+                    break;
 
-            case "login":
-                var loginPacket = JsonConvert.DeserializeObject<LogInRequestPacket>(json);
-                var loginController = new LogInController();
-                await loginController.ClickLogIn(socket, loginPacket.username, loginPacket.password);
-                break;
-            case "logout":
-                await RaceManager.Instance.SendPacketToAllClients(json, socket);
-                await RaceManager.Instance.SendPacketToClient(socket, json);
-                RaceManager.Instance.MarkLogOut(socket);
-                return;
+                case JTokenType.Array:
+                    foreach (var item in token)
+                    {
+                        //Đệ quy để cho từng phần tử của JTokenType.Array quay ngược lại case JTokenType.Object
+                        await ReceivePacketFromClient(socket, item.ToString(Formatting.None)); 
+                    }
+                    break;
+            }
+            switch (cmd)
+            {
+                case "syncData":
+                    await RaceManager.Instance.SendPacketToAllClients(json, socket);
+                    break;
 
-            case "register":
-                var registerPacket = JsonConvert.DeserializeObject<RegisterRequestPacket>(json);
-                var registerController = new RegisterController();
-                await registerController.ClickRegister(socket, registerPacket.idSchool, registerPacket.username, registerPacket.password, registerPacket.nameChar, registerPacket.hair, registerPacket.blessingPoints);
-                break;
+                case "login":
+                    var loginPacket = JsonConvert.DeserializeObject<LogInRequestPacket>(json);
+                    var loginController = new LogInController();
+                    await loginController.ClickLogIn(socket, loginPacket.username, loginPacket.password);
+                    break;
+                case "logout":
+                    await RaceManager.Instance.SendPacketToAllClients(json, socket);
+                    await RaceManager.Instance.SendPacketToClient(socket, json);
+                    RaceManager.Instance.MarkLogOut(socket);
+                    return;
 
-            case "equipment":
-                var equipmentPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
-                var equipmentController = new EquipmentController();
-                await equipmentController.ReadDatabaseEquipment(socket);
-                break;
+                case "register":
+                    var registerPacket = JsonConvert.DeserializeObject<RegisterRequestPacket>(json);
+                    var registerController = new RegisterController();
+                    await registerController.ClickRegister(socket, registerPacket.idSchool, registerPacket.username, registerPacket.password, registerPacket.nameChar, registerPacket.hair, registerPacket.blessingPoints);
+                    break;
 
-            case "equipmentAttributes":
-                var equipmentAttributesRequestPacket = JsonConvert.DeserializeObject<ReadAttributesEquipmentRequestPacket>(json);
-                var readAttributesEquipmentController = new ReadAttributesController();
-                await readAttributesEquipmentController.ReadAttributesEquipment(socket, equipmentAttributesRequestPacket.idAccount, equipmentAttributesRequestPacket.id);
-                break;
+                case "equipment":
+                    var equipmentPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
+                    var equipmentController = new EquipmentController();
+                    await equipmentController.ReadDatabaseEquipment(socket);
+                    break;
 
-            case "inventory":
-                var inventoryPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
-                var inventoryController = new InventoryController();
-                await inventoryController.ReadDatabaseInventory(socket);
-                break;
+                case "equipmentAttributes":
+                    var equipmentAttributesRequestPacket = JsonConvert.DeserializeObject<ReadAttributesEquipmentRequestPacket>(json);
+                    var readAttributesEquipmentController = new ReadAttributesController();
+                    await readAttributesEquipmentController.ReadAttributesEquipment(socket, equipmentAttributesRequestPacket.idAccount, equipmentAttributesRequestPacket.id);
+                    break;
 
-            case "inventoryAttributes":
-                var inventoryAttributesRequestPacket = JsonConvert.DeserializeObject<ReadAttributesInventoryRequestPacket>(json);
-                var readAttributesInventoryController = new ReadAttributesController();
-                await readAttributesInventoryController.ReadAttributesInventory(socket, inventoryAttributesRequestPacket.idAccount, inventoryAttributesRequestPacket.id);
-                break;
+                case "inventory":
+                    var inventoryPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
+                    var inventoryController = new InventoryController();
+                    await inventoryController.ReadDatabaseInventory(socket);
+                    break;
 
-            case "equipItem0":
-                var equipItem0RequestPacket = JsonConvert.DeserializeObject<EquipItem0RequestPacket>(json);
-                var equipItem0Controller = new ReadAttributesController();
-                await equipItem0Controller.EquipItem0(socket, equipItem0RequestPacket.idAccount, equipItem0RequestPacket.id, equipItem0RequestPacket.idItem0, equipItem0RequestPacket.slotName);
-                break;
+                case "inventoryAttributes":
+                    var inventoryAttributesRequestPacket = JsonConvert.DeserializeObject<ReadAttributesInventoryRequestPacket>(json);
+                    var readAttributesInventoryController = new ReadAttributesController();
+                    await readAttributesInventoryController.ReadAttributesInventory(socket, inventoryAttributesRequestPacket.idAccount, inventoryAttributesRequestPacket.id);
+                    break;
 
-            case "outfitSprites":
-                var outfitSpritesPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
-                var outfitSpritesController = new EquipmentController();
-                await outfitSpritesController.ReadDatabaseOutfitSprites(socket);
-                break;
+                case "equipItem0":
+                    var equipItem0RequestPacket = JsonConvert.DeserializeObject<EquipItem0RequestPacket>(json);
+                    var equipItem0Controller = new ReadAttributesController();
+                    await equipItem0Controller.EquipItem0(socket, equipItem0RequestPacket.idAccount, equipItem0RequestPacket.id, equipItem0RequestPacket.idItem0, equipItem0RequestPacket.slotName);
+                    break;
 
-            default:
-                break;
+                case "outfitSprites":
+                    var outfitSpritesPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
+                    var outfitSpritesController = new EquipmentController();
+                    await outfitSpritesController.ReadDatabaseOutfitSprites(socket);
+                    break;
+
+                default:
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error processing packet: " + ex.Message);
         }
     }
 }

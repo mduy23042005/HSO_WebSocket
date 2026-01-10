@@ -8,4 +8,3 @@ D:\Unity project\HSO_WebSocket\obj\Debug\HSO_WebSocket.csproj.CoreCompileInputs.
 D:\Unity project\HSO_WebSocket\obj\Debug\HSO_WebS.68D4A671.Up2Date
 D:\Unity project\HSO_WebSocket\obj\Debug\HSO_WebSocket.exe
 D:\Unity project\HSO_WebSocket\obj\Debug\HSO_WebSocket.pdb
-D:\Unity project\HSO_WebSocket\obj\Debug\HSO_WebSocket.exe.config

@@ -30,8 +30,6 @@ class LogOutRequestPacket
 
 public class LogInController
 {
-    private static int idAcc;
-
     public async Task ClickLogIn(WebSocket socket, string username, string password)
     {
         LogInResultPacket loginResult;
@@ -52,7 +50,6 @@ public class LogInController
                 nameChar = acc.NameChar,
                 hair = acc.Hair
             };
-            idAcc = acc.IDAccount;
         }
         else
         {
@@ -71,11 +68,6 @@ public class LogInController
 
         string packet = JsonConvert.SerializeObject(loginResult);
         await RaceManager.Instance.SendPacketToClient(socket, packet);
-        RaceManager.Instance.BindAccountToClient(socket, idAcc);
-    }
-
-    public static int? GetIDAccount() //nếu bấm vào Đăng ký thì idAccount = 0
-    {
-        return idAcc;
+        RaceManager.Instance.BindAccountToClient(socket, acc.IDAccount);
     }
 }
