@@ -22,7 +22,7 @@ public class RegisterResultPacket
 }
 class RegisterController
 {
-    public async Task ClickRegister(WebSocket socket, int idSchool, string username, string password, string nameChar, int hair, int blessingPoints)
+    public async Task ClickRegister(ClientConnection client, int idSchool, string username, string password, string nameChar, int hair, int blessingPoints)
     {
         int weapon = 0, helmet = 0, armor = 0, legArmor = 0;
         switch (idSchool)
@@ -128,6 +128,6 @@ class RegisterController
         }
 
         string packet = JsonConvert.SerializeObject(registerResult);
-        await RaceManager.Instance.SendPacketToClient(socket, packet);
+        await RaceManager.Instance.SendPacketToClient(client, packet);
     }
 }

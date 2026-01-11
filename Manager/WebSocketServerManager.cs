@@ -7,6 +7,20 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+public sealed class ClientConnection
+{
+    public Guid idConnection = Guid.NewGuid();
+    public WebSocket socket;
+    public string ipRemote;
+    public DateTime connectedAt = DateTime.UtcNow;
+
+    public ClientConnection(WebSocket socket, string ipRemote)
+    {
+        this.socket = socket;
+        this.ipRemote = ipRemote;
+    }
+}
+
 class WebSocketServerManager
 {
     static async Task Main(string[] args)
@@ -15,7 +29,7 @@ class WebSocketServerManager
         listener.Prefixes.Add("http://+:55556/");
         listener.Start();
         Console.WriteLine("Web Socket Server started at ws://+:55556/");
-        await WebAPIManager.Instance.TestAPI();
+        await WebAPIManager.Instance.InitAPI();
         // 
         var cts = new CancellationTokenSource();
         _ = StartCleanupLoop(cts.Token);
@@ -28,10 +42,13 @@ class WebSocketServerManager
             if (context.Request.IsWebSocketRequest)
             {
                 HttpListenerWebSocketContext wsContext = await context.AcceptWebSocketAsync(null);
-                string clientIP = context.Request.RemoteEndPoint?.ToString() ?? "Unknown";
-                Console.WriteLine($"New client connected! IP: {clientIP}");
-                RaceManager.Instance.RegisterClient(wsContext.WebSocket);
-                _ = HandleClient(wsContext.WebSocket);
+
+                string IPClient = context.Request.RemoteEndPoint?.ToString() ?? "Unknown";
+                var client = new ClientConnection(wsContext.WebSocket, IPClient);
+                Console.WriteLine($"New socket connected! IP Client: {IPClient}");
+
+                RaceManager.Instance.RegisterClient(client);
+                _ = HandleClient(client);
             }
             else
             {
@@ -60,31 +77,24 @@ class WebSocketServerManager
         }
     }
 
-    static async Task HandleClient(WebSocket socket)
+    static async Task HandleClient(ClientConnection client)
     {
         var buffer = new byte[4096];
         var messageBuffer = new StringBuilder();
 
         try
         {
-            while (socket.State == WebSocketState.Open)
+            while (client.socket.State == WebSocketState.Open)
             {
                 WebSocketReceiveResult result;
 
                 do
                 {
-                    result = await socket.ReceiveAsync(
-                        new ArraySegment<byte>(buffer),
-                        CancellationToken.None
-                    );
+                    result = await client.socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        await socket.CloseAsync(
-                            WebSocketCloseStatus.NormalClosure,
-                            "Closing",
-                            CancellationToken.None
-                        );
+                        await client.socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
                         return;
                     }
 
@@ -95,27 +105,28 @@ class WebSocketServerManager
                 string fullMessage = messageBuffer.ToString();
                 messageBuffer.Clear();
 
-                await ReceivePacketFromClient(socket, fullMessage);
+                await ReceivePacketFromClient(client, fullMessage);
             }
         }
         catch (WebSocketException wsex)
         {
-            Console.WriteLine("Client disconnected unexpectedly: " + wsex.Message);
+            Console.WriteLine($"Client is disconnected by WebSocket Exception! {client.idConnection} | {client.ipRemote} | reason: {wsex.Message}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Other exception: " + ex.Message);
+            Console.WriteLine($"Client is disconnected by Exception! {client.idConnection} | {client.ipRemote} | exception: {ex.Message}");
         }
         finally
         {
-            if (socket.State != WebSocketState.Closed)
+            Console.WriteLine($"Client disconnected! {client.idConnection} | {client.ipRemote} | state: {client.socket.State}");
+            if (client.socket.State != WebSocketState.Closed)
             {
-                RaceManager.Instance.MarkLogOut(socket);
+                RaceManager.Instance.MarkLogOut(client);
             }
         }
     }
 
-    public static async Task ReceivePacketFromClient(WebSocket socket, string json)
+    public static async Task ReceivePacketFromClient(ClientConnection client, string json)
     {
         try
         {
@@ -131,67 +142,66 @@ class WebSocketServerManager
                     foreach (var item in token)
                     {
                         //Đệ quy để cho từng phần tử của JTokenType.Array quay ngược lại case JTokenType.Object
-                        await ReceivePacketFromClient(socket, item.ToString(Formatting.None)); 
+                        await ReceivePacketFromClient(client, item.ToString(Formatting.None)); 
                     }
                     break;
             }
             switch (cmd)
             {
                 case "syncData":
-                    await RaceManager.Instance.SendPacketToAllClients(json, socket);
+                    await RaceManager.Instance.SendPacketToAllClients(json, client);
                     break;
 
                 case "login":
                     var loginPacket = JsonConvert.DeserializeObject<LogInRequestPacket>(json);
                     var loginController = new LogInController();
-                    await loginController.ClickLogIn(socket, loginPacket.username, loginPacket.password);
+                    await loginController.ClickLogIn(client, loginPacket.username, loginPacket.password);
                     break;
                 case "logout":
-                    await RaceManager.Instance.SendPacketToAllClients(json, socket);
-                    await RaceManager.Instance.SendPacketToClient(socket, json);
-                    RaceManager.Instance.MarkLogOut(socket);
+                    RaceManager.Instance.MarkLogOut(client);
+                    await RaceManager.Instance.SendPacketToClient(client, json);
                     return;
 
                 case "register":
                     var registerPacket = JsonConvert.DeserializeObject<RegisterRequestPacket>(json);
                     var registerController = new RegisterController();
-                    await registerController.ClickRegister(socket, registerPacket.idSchool, registerPacket.username, registerPacket.password, registerPacket.nameChar, registerPacket.hair, registerPacket.blessingPoints);
+                    await registerController.ClickRegister(client, registerPacket.idSchool, registerPacket.username, registerPacket.password, registerPacket.nameChar, registerPacket.hair, registerPacket.blessingPoints);
                     break;
 
                 case "equipment":
                     var equipmentPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
                     var equipmentController = new EquipmentController();
-                    await equipmentController.ReadDatabaseEquipment(socket);
+                    await equipmentController.ReadDatabaseEquipment(client);
                     break;
 
                 case "equipmentAttributes":
                     var equipmentAttributesRequestPacket = JsonConvert.DeserializeObject<ReadAttributesEquipmentRequestPacket>(json);
                     var readAttributesEquipmentController = new ReadAttributesController();
-                    await readAttributesEquipmentController.ReadAttributesEquipment(socket, equipmentAttributesRequestPacket.idAccount, equipmentAttributesRequestPacket.id);
+                    await readAttributesEquipmentController.ReadAttributesEquipment(client, equipmentAttributesRequestPacket.idAccount, equipmentAttributesRequestPacket.id);
                     break;
 
                 case "inventory":
                     var inventoryPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
                     var inventoryController = new InventoryController();
-                    await inventoryController.ReadDatabaseInventory(socket);
+                    await inventoryController.ReadDatabaseInventory(client);
                     break;
 
                 case "inventoryAttributes":
                     var inventoryAttributesRequestPacket = JsonConvert.DeserializeObject<ReadAttributesInventoryRequestPacket>(json);
                     var readAttributesInventoryController = new ReadAttributesController();
-                    await readAttributesInventoryController.ReadAttributesInventory(socket, inventoryAttributesRequestPacket.idAccount, inventoryAttributesRequestPacket.id);
+                    await readAttributesInventoryController.ReadAttributesInventory(client, inventoryAttributesRequestPacket.idAccount, inventoryAttributesRequestPacket.id);
                     break;
 
                 case "equipItem0":
                     var equipItem0RequestPacket = JsonConvert.DeserializeObject<EquipItem0RequestPacket>(json);
                     var equipItem0Controller = new ReadAttributesController();
-                    await equipItem0Controller.EquipItem0(socket, equipItem0RequestPacket.idAccount, equipItem0RequestPacket.id, equipItem0RequestPacket.idItem0, equipItem0RequestPacket.slotName);
+                    await equipItem0Controller.EquipItem0(client, equipItem0RequestPacket.idAccount, equipItem0RequestPacket.id, equipItem0RequestPacket.idItem0, equipItem0RequestPacket.slotName);
                     break;
 
                 case "outfitSprites":
                     var outfitSpritesPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
                     var outfitSpritesController = new EquipmentController();
-                    await outfitSpritesController.ReadDatabaseOutfitSprites(socket);
+                    await outfitSpritesController.ReadDatabaseOutfitSprites(client);
                     break;
 
                 default:

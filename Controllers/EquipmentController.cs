@@ -20,9 +20,9 @@ public class EquipmentResultPacket
 
 class EquipmentController
 {
-    public async Task ReadDatabaseEquipment(WebSocket socket)
+    public async Task ReadDatabaseEquipment(ClientConnection client)
     {
-        int idAccount = RaceManager.Instance.GetIDAccount(socket);
+        int idAccount = RaceManager.Instance.GetIDAccount(client);
 
         string urlItems = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/equipment?idAccount={idAccount}";
 
@@ -48,16 +48,16 @@ class EquipmentController
             }
 
             string packet = JsonConvert.SerializeObject(equipmentResult);
-            await RaceManager.Instance.SendPacketToClient(socket, packet);
+            await RaceManager.Instance.SendPacketToClient(client, packet);
         }
         catch (System.Exception ex)
         {
             Console.WriteLine("Lỗi khi lấy equipment: " + ex.Message);
         }
     }
-    public async Task ReadDatabaseOutfitSprites(WebSocket socket)
+    public async Task ReadDatabaseOutfitSprites(ClientConnection client)
     {
-        int idAccount = RaceManager.Instance.GetIDAccount(socket);
+        int idAccount = RaceManager.Instance.GetIDAccount(client);
 
         string urlItems = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/equipment?idAccount={idAccount}";
 
@@ -83,7 +83,7 @@ class EquipmentController
             }
 
             string packet = JsonConvert.SerializeObject(equipmentResult);
-            await RaceManager.Instance.SendPacketToClient(socket, packet);
+            await RaceManager.Instance.SendPacketToClient(client, packet);
         }
         catch (System.Exception ex)
         {

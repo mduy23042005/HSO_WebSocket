@@ -8,121 +8,113 @@ using System.Threading.Tasks;
 public sealed class RaceManager
 {
     private static readonly Lazy<RaceManager> lazyInstance = new Lazy<RaceManager>(() => new RaceManager());
-    private readonly Dictionary<WebSocket, SemaphoreSlim> socketSendLocks = new Dictionary<WebSocket, SemaphoreSlim>();
-    private readonly HashSet<WebSocket> logoutSockets = new HashSet<WebSocket>();
+    private readonly Dictionary<ClientConnection, SemaphoreSlim> socketSendLocks = new Dictionary<ClientConnection, SemaphoreSlim>();
+    private readonly HashSet<ClientConnection> logoutClients = new HashSet<ClientConnection>();
 
     public static RaceManager Instance => lazyInstance.Value;
 
-    private readonly List<WebSocket> connectedClients;
-    private readonly Dictionary<WebSocket, int> clientAccountMapping;
+    private readonly List<ClientConnection> connectedClients;
+    private readonly Dictionary<ClientConnection, int> clientAccountMapping;
 
     private readonly object clientCollectionLock;
 
     private RaceManager()
     {
-        connectedClients = new List<WebSocket>();
-        clientAccountMapping = new Dictionary<WebSocket, int>();
+        connectedClients = new List<ClientConnection>();
+        socketSendLocks = new Dictionary<ClientConnection, SemaphoreSlim>();
+        clientAccountMapping = new Dictionary<ClientConnection, int>();
+        logoutClients = new HashSet<ClientConnection>();
         clientCollectionLock = new object();
     }
 
-    public void RegisterClient(WebSocket webSocket)
+    public void RegisterClient(ClientConnection client)
     {
-        if (webSocket == null)
-            throw new ArgumentNullException(nameof(webSocket));
+        if (client == null)
+            throw new ArgumentNullException(nameof(client));
 
         lock (clientCollectionLock)
         {
-            if (!connectedClients.Contains(webSocket))
+            if (!connectedClients.Contains(client))
             {
-                connectedClients.Add(webSocket);
-                socketSendLocks[webSocket] = new SemaphoreSlim(1, 1);
+                connectedClients.Add(client);
+                socketSendLocks[client] = new SemaphoreSlim(1, 1);
             }
         }
     }
-    public void UnregisterClient(WebSocket webSocket)
+    public void UnregisterClient(ClientConnection client)
     {
-        if (webSocket == null)
+        if (client == null)
             return;
 
         lock (clientCollectionLock)
         {
-            connectedClients.Remove(webSocket);
-            clientAccountMapping.Remove(webSocket);
+            connectedClients.Remove(client);
+            clientAccountMapping.Remove(client);
 
-            if (socketSendLocks.TryGetValue(webSocket, out var semaphore))
+            if (socketSendLocks.TryGetValue(client, out var semaphore))
             {
                 semaphore.Dispose();
-                socketSendLocks.Remove(webSocket);
+                socketSendLocks.Remove(client);
             }
         }
     }
 
-    public void BindAccountToClient(WebSocket webSocket, int idAccount)
+    public void BindAccountToClient(ClientConnection client, int idAccount)
     {
-        if (webSocket == null)
-            throw new ArgumentNullException(nameof(webSocket));
+        if (client == null)
+            throw new ArgumentNullException(nameof(client));
 
         lock (clientCollectionLock)
         {
-            clientAccountMapping[webSocket] = idAccount;
+            clientAccountMapping[client] = idAccount;
         }
     }
-    public int GetIDAccount(WebSocket socket)
+    public int GetIDAccount(ClientConnection client)
     {
-        if (socket == null)
+        if (client == null)
             return 0;
 
         lock (clientCollectionLock)
         {
-            return clientAccountMapping.TryGetValue(socket, out var idAccount) ? idAccount : 0;
+            return clientAccountMapping.TryGetValue(client, out var idAccount) ? idAccount : 0;
         }
     }
 
-    private List<WebSocket> CreateClientSnapshot()
+    private List<ClientConnection> CreateClientSnapshot()
     {
         lock (clientCollectionLock)
         {
-            return new List<WebSocket>(connectedClients);
+            return new List<ClientConnection>(connectedClients);
         }
     }
 
-    public async Task SendPacketToAllClients(string packet, WebSocket excludedClient = null)
+    public async Task SendPacketToAllClients(string packet, ClientConnection excludedClient = null)
     {
         if (string.IsNullOrEmpty(packet))
             return;
 
-        List<WebSocket> snapshot = CreateClientSnapshot();
+        List<ClientConnection> snapshot = CreateClientSnapshot();
         List<Task> tasks = new List<Task>();
 
-        foreach (WebSocket client in snapshot)
+        foreach (ClientConnection client in snapshot)
         {
             if (client == excludedClient)
                 continue;
 
-            if (client.State != WebSocketState.Open)
+            if (client.socket.State != WebSocketState.Open)
                 continue;
-            tasks.Add(Task.Run(async () =>
-            {
-                try
-                {
-                    await SendPacketToClient(client, packet);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("[BROADCAST ERROR] " + ex.Message);
-                    MarkLogOut(client);
-                }
-            }));
+
+            tasks.Add(SendPacketToClient(client, packet));
         }
 
         await Task.WhenAll(tasks);
     }
-    public async Task SendPacketToClient(WebSocket targetClient, string packet)
+    public async Task SendPacketToClient(ClientConnection targetClient, string packet)
     {
         if (targetClient == null)
             return;
 
-        if (targetClient.State != WebSocketState.Open)
+        if (targetClient.socket.State != WebSocketState.Open)
             return;
 
         if (string.IsNullOrEmpty(packet))
@@ -138,12 +130,15 @@ public sealed class RaceManager
         try
         {
             await sendLock.WaitAsync();
-            if (targetClient.State != WebSocketState.Open)
+            if (targetClient.socket.State != WebSocketState.Open)
                 return;
 
             byte[] packetBytes = Encoding.UTF8.GetBytes(packet);
 
-            await targetClient.SendAsync(new ArraySegment<byte>(packetBytes), WebSocketMessageType.Text, true, CancellationToken.None);
+            if (targetClient.socket.State == WebSocketState.Open)
+            {
+                await targetClient.socket.SendAsync(new ArraySegment<byte>(packetBytes), WebSocketMessageType.Text, true, CancellationToken.None);
+            }
         }
         catch (ObjectDisposedException)
         {
@@ -169,62 +164,67 @@ public sealed class RaceManager
         }
     }
 
-    public void MarkLogOut(WebSocket socket)
+    public void MarkLogOut(ClientConnection socket)
     {
         if (socket == null)
             return;
 
         lock (clientCollectionLock)
         {
-            logoutSockets.Add(socket);
+            logoutClients.Add(socket);
         }
     }
 
     public void RemoveDisconnectedClients()
     {
-        List<WebSocket> needCleanup = new List<WebSocket>();
+        List<ClientConnection> needCleanup = new List<ClientConnection>();
 
         lock (clientCollectionLock)
         {
-            foreach (var socket in connectedClients)
+            foreach (var client in connectedClients)
             {
-                if (socket == null)
+                if (client == null)
                 {
-                    needCleanup.Add(socket);
+                    needCleanup.Add(client);
                     continue;
                 }
 
                 // logout chủ động
-                if (logoutSockets.Contains(socket))
+                if (logoutClients.Contains(client))
                 {
-                    needCleanup.Add(socket);
+                    needCleanup.Add(client);
                     continue;
                 }
 
                 // disconnect bất ngờ
-                if (socket.State != WebSocketState.Open)
+                if (client.socket.State != WebSocketState.Open)
                 {
-                    needCleanup.Add(socket);
+                    needCleanup.Add(client);
                 }
             }
         }
 
-        foreach (var socket in needCleanup)
+        foreach (var client in needCleanup)
         {
-            if (socket == null)
+            if (client == null)
                 continue;
 
-            UnregisterClient(socket);
-
-            if (socket.State == WebSocketState.Open || socket.State == WebSocketState.CloseReceived)
+            if (client.socket.State == WebSocketState.Open || client.socket.State == WebSocketState.CloseReceived)
             {
                 try
                 {
-                    socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Logout", CancellationToken.None).Wait();
+                    client.socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Logout", CancellationToken.None).Wait();
                 }
                 catch { }
             }
-            socket.Dispose();
+
+            UnregisterClient(client);
+            client.socket.Dispose();
+
+            lock (clientCollectionLock)
+            {
+                logoutClients.Remove(client);
+            }
         }
     }
 }

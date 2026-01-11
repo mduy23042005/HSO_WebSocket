@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Net.WebSockets;
 using System.Threading.Tasks;
 
 public class ReadAttributesEquipmentRequestPacket
@@ -53,7 +52,7 @@ public class EquipItem0RequestPacket
 
 class ReadAttributesController
 {
-    public async Task ReadAttributesEquipment(WebSocket socket, int idAcc, int id)
+    public async Task ReadAttributesEquipment(ClientConnection client, int idAcc, int id)
     {
         int idAccount = idAcc;
         List<ReadAttributesEquipmentResultPacket> equipmentResult;
@@ -86,7 +85,7 @@ class ReadAttributesController
             }
 
             string packet = JsonConvert.SerializeObject(equipmentResult);
-            await RaceManager.Instance.SendPacketToClient(socket, packet);
+            await RaceManager.Instance.SendPacketToClient(client, packet);
         }
         catch (System.Exception ex)
         {
@@ -94,7 +93,7 @@ class ReadAttributesController
         }
     }
 
-    public async Task ReadAttributesInventory(WebSocket socket, int idAcc, int id)
+    public async Task ReadAttributesInventory(ClientConnection client, int idAcc, int id)
     {
         int idAccount = idAcc;
 
@@ -129,7 +128,7 @@ class ReadAttributesController
             }
 
             string packet = JsonConvert.SerializeObject(inventoryResult);
-            await RaceManager.Instance.SendPacketToClient(socket, packet);
+            await RaceManager.Instance.SendPacketToClient(client, packet);
         }
         catch (System.Exception ex)
         {
@@ -137,7 +136,7 @@ class ReadAttributesController
         }
     }
 
-    public async Task EquipItem0(WebSocket socket, int idAcc, int id, int idItem0, string slotName)
+    public async Task EquipItem0(ClientConnection client, int idAcc, int id, int idItem0, string slotName)
     {
         int idAccount = idAcc;
 
@@ -148,8 +147,8 @@ class ReadAttributesController
         {
             await WebAPIManager.Instance.PostAsync($"api/account/{idAccount}/equipItem0/{id}?idAccount={idAccount}&id={id}&slotName={slotName}");
 
-            await inventoryController.ReadDatabaseInventory(socket);
-            await equipmentController.ReadDatabaseEquipment(socket);
+            await inventoryController.ReadDatabaseInventory(client);
+            await equipmentController.ReadDatabaseEquipment(client);
         }
         catch (System.Exception ex)
         {

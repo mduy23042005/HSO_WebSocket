@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Net.WebSockets;
 using System.Threading.Tasks;
 
 public class InventoryRequestPacket
@@ -22,9 +21,9 @@ public class InventoryResultPacket
 
 class InventoryController
 {
-    public async Task ReadDatabaseInventory(WebSocket socket)
+    public async Task ReadDatabaseInventory(ClientConnection client)
     {
-        int idAccount = RaceManager.Instance.GetIDAccount(socket);
+        int idAccount = RaceManager.Instance.GetIDAccount(client);
         string urlItems = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/inventory";
 
         List<InventoryResultPacket> inventoryResult;
@@ -51,7 +50,7 @@ class InventoryController
             }
 
             string packet = JsonConvert.SerializeObject(inventoryResult);
-            await RaceManager.Instance.SendPacketToClient(socket, packet);
+            await RaceManager.Instance.SendPacketToClient(client, packet);
         }
         catch (System.Exception ex)
         {

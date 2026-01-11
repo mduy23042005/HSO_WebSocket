@@ -18,7 +18,7 @@ public class WebAPIManager
         return client;
     }
 
-    public async Task TestAPI()
+    public async Task InitAPI()
     {
         try
         {

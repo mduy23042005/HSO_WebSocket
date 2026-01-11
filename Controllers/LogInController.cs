@@ -30,7 +30,7 @@ class LogOutRequestPacket
 
 public class LogInController
 {
-    public async Task ClickLogIn(WebSocket socket, string username, string password)
+    public async Task ClickLogIn(ClientConnection client, string username, string password)
     {
         LogInResultPacket loginResult;
 
@@ -67,7 +67,7 @@ public class LogInController
         }
 
         string packet = JsonConvert.SerializeObject(loginResult);
-        await RaceManager.Instance.SendPacketToClient(socket, packet);
-        RaceManager.Instance.BindAccountToClient(socket, acc.IDAccount);
+        await RaceManager.Instance.SendPacketToClient(client, packet);
+        RaceManager.Instance.BindAccountToClient(client, acc.IDAccount);
     }
 }
