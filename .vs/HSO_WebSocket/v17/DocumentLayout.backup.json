@@ -3,12 +3,16 @@
   "WorkspaceRootPath": "D:\\Unity project\\HSO_WebSocket\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{2574B21C-0FB7-4A03-84BB-2AC9CFD251FC}|HSO_WebSocket.csproj|d:\\unity project\\hso_websocket\\manager\\websocketservermanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{2574B21C-0FB7-4A03-84BB-2AC9CFD251FC}|HSO_WebSocket.csproj|D:\\Unity project\\HSO_WebSocket\\manager\\websocketservermanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{2574B21C-0FB7-4A03-84BB-2AC9CFD251FC}|HSO_WebSocket.csproj|solutionrelative:manager\\websocketservermanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{2574B21C-0FB7-4A03-84BB-2AC9CFD251FC}|HSO_WebSocket.csproj|D:\\Unity project\\HSO_WebSocket\\manager\\webapimanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{2574B21C-0FB7-4A03-84BB-2AC9CFD251FC}|HSO_WebSocket.csproj|solutionrelative:manager\\webapimanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2574B21C-0FB7-4A03-84BB-2AC9CFD251FC}|HSO_WebSocket.csproj|d:\\unity project\\hso_websocket\\controllers\\logincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2574B21C-0FB7-4A03-84BB-2AC9CFD251FC}|HSO_WebSocket.csproj|solutionrelative:controllers\\logincontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -18,8 +22,21 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 2,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "LogInController.cs",
+              "DocumentMoniker": "D:\\Unity project\\HSO_WebSocket\\Controllers\\LogInController.cs",
+              "RelativeDocumentMoniker": "Controllers\\LogInController.cs",
+              "ToolTip": "D:\\Unity project\\HSO_WebSocket\\Controllers\\LogInController.cs",
+              "RelativeToolTip": "Controllers\\LogInController.cs",
+              "ViewState": "AgIAABUAAAAAAAAAAAAYwD8AAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-01-28T11:44:19.994Z",
+              "EditorCaption": ""
+            },
             {
               "$type": "Document",
               "DocumentIndex": 1,
@@ -28,9 +45,10 @@
               "RelativeDocumentMoniker": "Manager\\WebAPIManager.cs",
               "ToolTip": "D:\\Unity project\\HSO_WebSocket\\Manager\\WebAPIManager.cs",
               "RelativeToolTip": "Manager\\WebAPIManager.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAEAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-11T12:59:09.377Z"
+              "WhenOpened": "2026-01-28T09:15:51.822Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -40,9 +58,9 @@
               "RelativeDocumentMoniker": "Manager\\WebSocketServerManager.cs",
               "ToolTip": "D:\\Unity project\\HSO_WebSocket\\Manager\\WebSocketServerManager.cs",
               "RelativeToolTip": "Manager\\WebSocketServerManager.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAB0AAAAAAAAAAAAiwDAAAAAsAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-01-10T03:28:54.918Z",
+              "WhenOpened": "2026-01-28T11:30:41.805Z",
               "EditorCaption": ""
             }
           ]

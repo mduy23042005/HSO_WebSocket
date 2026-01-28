@@ -23,19 +23,10 @@ public class WebAPIManager
         try
         {
             HttpResponseMessage response = await client.GetAsync(apiUrl);
-
-            if (response.IsSuccessStatusCode)
-            {
-                Console.WriteLine("Web API Database started at http://localhost:55555/");
-            }
-            else
-            {
-                Console.WriteLine($"Web API Database error: {response.StatusCode}");
-            }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Console.WriteLine("Web API Database: Connect fail! " + ex.Message);
+            Console.WriteLine(" " + ex.Message);
         }
     }
 

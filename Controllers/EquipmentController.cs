@@ -1,8 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.WebSockets;
 using System.Threading.Tasks;
 
 public class EquipmentRequestPacket
@@ -16,76 +14,70 @@ public class EquipmentResultPacket
     public int id;
     public int idItem0_1;
     public int category;
+    public List<Item0_Attribute> item0_Attributes;
+    public List<Attribute> nameAttributes;
 }
 
 class EquipmentController
 {
-    public async Task ReadDatabaseEquipment(ClientConnection client)
+    public async Task ReadCacheEquipment(ClientConnection client)
     {
         int idAccount = RaceManager.Instance.GetIDAccount(client);
 
-        string urlItems = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/equipment?idAccount={idAccount}";
-
-        List<EquipmentResultPacket> equipmentResult;
-
         try
         {
-            HttpResponseMessage res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlItems);
-            string json = await res.Content.ReadAsStringAsync();
-            List<EquipmentResultPacket> data = JsonConvert.DeserializeObject<List<EquipmentResultPacket>>(json);
+            var equipmentData = CacheManager.Instance.GetAccountData(idAccount).equipments;
 
-            equipmentResult = new List<EquipmentResultPacket>();
+            List<EquipmentResultPacket> equipmentResult = new List<EquipmentResultPacket>();
 
-            foreach (var equippedItem in data)
+            foreach (var equippedItem in equipmentData)
             {
                 equipmentResult.Add(new EquipmentResultPacket
                 {
                     cmd = "equipment_result",
                     id = equippedItem.id,
                     idItem0_1 = equippedItem.idItem0_1,
-                    category = equippedItem.category
+                    category = equippedItem.category,
+                    item0_Attributes = equippedItem.item0_Attributes,
+                    nameAttributes = equippedItem.nameAttributes
                 });
             }
 
             string packet = JsonConvert.SerializeObject(equipmentResult);
             await RaceManager.Instance.SendPacketToClient(client, packet);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine("Lỗi khi lấy equipment: " + ex.Message);
         }
     }
-    public async Task ReadDatabaseOutfitSprites(ClientConnection client)
+    public async Task ReadCacheOutfitSprites(ClientConnection client)
     {
         int idAccount = RaceManager.Instance.GetIDAccount(client);
 
-        string urlItems = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/equipment?idAccount={idAccount}";
-
-        List<EquipmentResultPacket> equipmentResult;
-
         try
         {
-            HttpResponseMessage res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlItems);
-            string json = await res.Content.ReadAsStringAsync();
-            List<EquipmentResultPacket> data = JsonConvert.DeserializeObject<List<EquipmentResultPacket>>(json);
+            var equipmentData = CacheManager.Instance.GetAccountData(idAccount).equipments;
 
-            equipmentResult = new List<EquipmentResultPacket>();
+            List<EquipmentResultPacket> equipmentResult = new List<EquipmentResultPacket>();
 
-            foreach (var equippedItem in data)
+            foreach (var equippedItem in equipmentData)
             {
                 equipmentResult.Add(new EquipmentResultPacket
                 {
                     cmd = "outfitSprites_result",
                     id = equippedItem.id,
                     idItem0_1 = equippedItem.idItem0_1,
-                    category = equippedItem.category
+                    category = equippedItem.category,
+                    item0_Attributes = equippedItem.item0_Attributes,
+                    nameAttributes = equippedItem.nameAttributes
                 });
             }
 
             string packet = JsonConvert.SerializeObject(equipmentResult);
             await RaceManager.Instance.SendPacketToClient(client, packet);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine("Lỗi khi lấy equipment: " + ex.Message);
         }

@@ -52,6 +52,8 @@
     <Compile Include="Controllers\MobsController.cs" />
     <Compile Include="Controllers\ReadAttributesController.cs" />
     <Compile Include="Controllers\RegisterController.cs" />
+    <Compile Include="Controllers\SyncDataController.cs" />
+    <Compile Include="Manager\CacheManager.cs" />
     <Compile Include="Manager\RaceManager.cs" />
     <Compile Include="Manager\WebAPIManager.cs" />
     <Compile Include="Models\Account.cs" />
@@ -66,6 +68,7 @@
     <Compile Include="Models\Attribute.cs" />
     <Compile Include="Models\Chest.cs" />
     <Compile Include="Models\Chest_ItemX.cs" />
+    <Compile Include="Models\Class1.cs" />
     <Compile Include="Models\ExpRequired.cs" />
     <Compile Include="Models\Item0.cs" />
     <Compile Include="Models\Item0_Attribute.cs" />
@@ -75,7 +78,9 @@
     <Compile Include="Models\Item3.cs" />
     <Compile Include="Models\Item4.cs" />
     <Compile Include="Models\Map.cs" />
+    <Compile Include="Models\Map_Mob.cs" />
     <Compile Include="Models\Mob.cs" />
+    <Compile Include="Models\NPC.cs" />
     <Compile Include="Models\School.cs" />
     <Compile Include="Models\Skill.cs" />
     <Compile Include="Manager\WebSocketServerManager.cs" />

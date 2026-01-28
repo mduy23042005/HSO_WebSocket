@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
 
 public class InventoryRequestPacket
@@ -16,43 +15,40 @@ public class InventoryResultPacket
     public int idItem0;
     public int category;
     public string typeItem0;
+    public List<Item0_Attribute> item0_Attributes;
+    public List<Attribute> nameAttributes;
     public int idSchool;
 }
 
 class InventoryController
 {
-    public async Task ReadDatabaseInventory(ClientConnection client)
+    public async Task ReadCacheInventory(ClientConnection client)
     {
         int idAccount = RaceManager.Instance.GetIDAccount(client);
-        string urlItems = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/inventory";
-
-        List<InventoryResultPacket> inventoryResult;
 
         try
         {
-            HttpResponseMessage res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlItems);
-            string json = await res.Content.ReadAsStringAsync();
-            List<InventoryResultPacket> data = JsonConvert.DeserializeObject<List<InventoryResultPacket>>(json);
+            var inventoryItem0Data = CacheManager.Instance.GetAccountData(idAccount).inventoryItem0s;
 
-            inventoryResult = new List<InventoryResultPacket>();
+            List<InventoryResultPacket> inventoryResult = new List<InventoryResultPacket>();
 
-            foreach (var inventoryItem in data)
+            foreach (var inventoryItem0 in inventoryItem0Data)
             {
                 inventoryResult.Add(new InventoryResultPacket
                 {
                     cmd = "inventory_result",
-                    id = inventoryItem.id,
-                    idItem0 = inventoryItem.idItem0,
-                    category = inventoryItem.category,
-                    typeItem0 = inventoryItem.typeItem0,
-                    idSchool = inventoryItem.idSchool 
+                    id = inventoryItem0.id,
+                    idItem0 = inventoryItem0.idItem0,
+                    category = inventoryItem0.category,
+                    typeItem0 = inventoryItem0.typeItem0,
+                    idSchool = inventoryItem0.idSchool,
                 });
             }
 
             string packet = JsonConvert.SerializeObject(inventoryResult);
             await RaceManager.Instance.SendPacketToClient(client, packet);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine("Lỗi khi lấy inventory: " + ex.Message);
         }

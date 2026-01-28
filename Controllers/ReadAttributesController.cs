@@ -55,74 +55,59 @@ class ReadAttributesController
     public async Task ReadAttributesEquipment(ClientConnection client, int idAcc, int id)
     {
         int idAccount = idAcc;
-        List<ReadAttributesEquipmentResultPacket> equipmentResult;
 
         try
         {
-            string urlListAttributes = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/equipItem/{id}/listAttributes?id={id}";
-            HttpResponseMessage res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlListAttributes);
-            string json = await res.Content.ReadAsStringAsync();
-            List<ReadAttributesEquipmentResultPacket> listIDAttributeEquip = JsonConvert.DeserializeObject<List<ReadAttributesEquipmentResultPacket>>(json);
+            var equipmentData = CacheManager.Instance.GetAccountData(idAccount).equipments.Find(x => x.id == id);
 
-            equipmentResult = new List<ReadAttributesEquipmentResultPacket>();
+            List<ReadAttributesEquipmentResultPacket> equipmentResult = new List<ReadAttributesEquipmentResultPacket>();
 
-            foreach (var r in listIDAttributeEquip)
+            foreach (var attribute in equipmentData.item0_Attributes)
             {
-                string urlNameAttribute = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/equipItem/{id}/listAttributes/{r.idAttribute}?idAttribute={r.idAttribute}";
-                res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlNameAttribute);
-                json = await res.Content.ReadAsStringAsync();
-                string nameAttribute = JsonConvert.DeserializeObject<string>(json);
-
+                var nameAttribute = equipmentData.nameAttributes.Find(x => x.IDAttribute == attribute.IDAttribute).NameAttribute;
                 equipmentResult.Add(new ReadAttributesEquipmentResultPacket
                 {
                     cmd = "equipmentAttributes_result",
-                    idItem0_1 = r.idItem0_1,
-                    category = r.category,
-                    nameItem = r.nameItem,
-                    value = r.value,
-                    attributes = nameAttribute
+                    idItem0_1 = equipmentData.idItem0_1,
+                    category = equipmentData.category,
+                    nameItem = equipmentData.nameItem0_1,
+
+                    value = attribute.Value,
+                    attributes = nameAttribute,
                 });
             }
 
             string packet = JsonConvert.SerializeObject(equipmentResult);
             await RaceManager.Instance.SendPacketToClient(client, packet);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine("Lỗi khi lấy attribute equipment: " + ex.Message);
         }
     }
 
-    public async Task ReadAttributesInventory(ClientConnection client, int idAcc, int id)
+    public async Task ReadAttributesInventory(ClientConnection client, int idAcc, int id) //sau này sẽ có truyền thêm loại item (0, 1, 2, 3, 4) vào để phân biệt
     {
         int idAccount = idAcc;
 
-        List<ReadAttributesInventoryResultPacket> inventoryResult;
-
         try
         {
-            string urlListAttributes = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/inventoryItem/{id}/listAttributes?id={id}";
-            HttpResponseMessage res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlListAttributes);
-            string json = await res.Content.ReadAsStringAsync();
-            List<ReadAttributesInventoryResultPacket> listIDAttributeEquip = JsonConvert.DeserializeObject<List<ReadAttributesInventoryResultPacket>>(json);
+            var inventoryItem0Data = CacheManager.Instance.GetAccountData(idAccount).inventoryItem0s.Find(x => x.id == id);
 
-            inventoryResult = new List<ReadAttributesInventoryResultPacket>();
+            List<ReadAttributesInventoryResultPacket> inventoryResult = new List<ReadAttributesInventoryResultPacket>();
 
-            foreach (var r in listIDAttributeEquip)
+            foreach (var attribute in inventoryItem0Data.item0_Attributes)
             {
-                string urlNameAttribute = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{idAccount}/inventoryItem/{id}/listAttributes/{r.idAttribute}?idAttribute={r.idAttribute}";
-                res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlNameAttribute);
-                json = await res.Content.ReadAsStringAsync();
-                string nameAttribute = JsonConvert.DeserializeObject<string>(json);
+                var nameAttribute = inventoryItem0Data.nameAttributes.Find(x => x.IDAttribute == attribute.IDAttribute).NameAttribute;
 
                 inventoryResult.Add(new ReadAttributesInventoryResultPacket
                 {
                     cmd = "inventoryAttributes_result",
-                    idItem0 = r.idItem0,
-                    category = r.category,
-                    typeItem0 = r.typeItem0,
-                    nameItem = r.nameItem,
-                    value = r.value,
+                    idItem0 = inventoryItem0Data.idItem0,
+                    category = inventoryItem0Data.category,
+                    typeItem0 = inventoryItem0Data.typeItem0,
+                    nameItem = inventoryItem0Data.nameItem0,
+                    value = attribute.Value,
                     attributes = nameAttribute
                 });
             }
@@ -130,7 +115,7 @@ class ReadAttributesController
             string packet = JsonConvert.SerializeObject(inventoryResult);
             await RaceManager.Instance.SendPacketToClient(client, packet);
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine("Lỗi khi lấy attribute inventory: " + ex.Message);
         }
@@ -145,12 +130,39 @@ class ReadAttributesController
 
         try
         {
-            await WebAPIManager.Instance.PostAsync($"api/account/{idAccount}/equipItem0/{id}?idAccount={idAccount}&id={id}&slotName={slotName}");
+            var accountData = CacheManager.Instance.GetAccountData(idAccount);
+            if (accountData == null) return;
 
-            await inventoryController.ReadDatabaseInventory(client);
-            await equipmentController.ReadDatabaseEquipment(client);
+            var inventoryItem0Data = accountData.inventoryItem0s.Find(x => x.id == id);
+            var equipmentData = accountData.equipments.Find(x => x.slotName == slotName);
+
+            var tempEquipmentItem = new EquipmentData
+            {
+                idItem0_1 = equipmentData.idItem0_1,
+                nameItem0_1 = equipmentData.nameItem0_1,
+                category = equipmentData.category,
+                item0_Attributes = equipmentData.item0_Attributes,
+                nameAttributes = equipmentData.nameAttributes
+            };
+
+            equipmentData.idItem0_1 = inventoryItem0Data.idItem0;
+            equipmentData.nameItem0_1 = inventoryItem0Data.nameItem0;
+            equipmentData.category = inventoryItem0Data.category;
+            equipmentData.item0_Attributes = inventoryItem0Data.item0_Attributes;
+            equipmentData.nameAttributes = inventoryItem0Data.nameAttributes;
+
+            inventoryItem0Data.idItem0 = tempEquipmentItem.idItem0_1;
+            inventoryItem0Data.nameItem0 = tempEquipmentItem.nameItem0_1;
+            inventoryItem0Data.category = tempEquipmentItem.category;
+            inventoryItem0Data.item0_Attributes = tempEquipmentItem.item0_Attributes;
+            inventoryItem0Data.nameAttributes = tempEquipmentItem.nameAttributes;
+
+            await equipmentController.ReadCacheEquipment(client);
+            await inventoryController.ReadCacheInventory(client);
+
+            await WebAPIManager.Instance.PostAsync($"api/account/{idAccount}/equipItem0/{id}?idAccount={idAccount}&id={id}&slotName={slotName}");
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
             Console.WriteLine("Lỗi khi trang bị item: " + ex.Message);
             return;

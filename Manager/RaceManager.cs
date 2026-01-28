@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -206,8 +208,12 @@ public sealed class RaceManager
 
         foreach (var client in needCleanup)
         {
-            if (client == null)
-                continue;
+            int idAccount = GetIDAccount(client);
+
+            if (idAccount != 0)
+            {
+                CacheManager.Instance.RemoveAccountData(idAccount);
+            }
 
             if (client.socket.State == WebSocketState.Open || client.socket.State == WebSocketState.CloseReceived)
             {
