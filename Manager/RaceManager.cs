@@ -1,8 +1,6 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
-using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,13 +11,12 @@ public sealed class RaceManager
     private readonly Dictionary<ClientConnection, SemaphoreSlim> socketSendLocks = new Dictionary<ClientConnection, SemaphoreSlim>();
     private readonly HashSet<ClientConnection> logoutClients = new HashSet<ClientConnection>();
 
-    public static RaceManager Instance => lazyInstance.Value;
-
     private readonly List<ClientConnection> connectedClients;
     private readonly Dictionary<ClientConnection, int> clientAccountMapping;
 
     private readonly object clientCollectionLock;
 
+    public static RaceManager Instance => lazyInstance.Value;
     private RaceManager()
     {
         connectedClients = new List<ClientConnection>();
@@ -166,14 +163,34 @@ public sealed class RaceManager
         }
     }
 
-    public void MarkLogOut(ClientConnection socket)
+    public void MarkLogOutAll()
     {
-        if (socket == null)
+        List<ClientConnection> snapshot;
+
+        lock (clientCollectionLock)
+        {
+            snapshot = CreateClientSnapshot();
+        }
+
+        foreach (var client in snapshot)
+        {
+            if (client == null)
+                continue;
+
+            lock (clientCollectionLock)
+            {
+                logoutClients.Add(client);
+            }
+        }
+    }
+    public void MarkLogOut(ClientConnection client)
+    {
+        if (client == null)
             return;
 
         lock (clientCollectionLock)
         {
-            logoutClients.Add(socket);
+            logoutClients.Add(client);
         }
     }
 
@@ -209,7 +226,6 @@ public sealed class RaceManager
         foreach (var client in needCleanup)
         {
             int idAccount = GetIDAccount(client);
-
             if (idAccount != 0)
             {
                 CacheManager.Instance.RemoveAccountData(idAccount);

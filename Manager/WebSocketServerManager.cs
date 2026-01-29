@@ -25,52 +25,71 @@ public sealed class ClientConnection
 
 public class WebSocketServerManager
 {
-    static HttpListener listener;
+    private HttpListener listener;
+    private CancellationTokenSource shutdownCts = new CancellationTokenSource();
+    private volatile bool isShuttingDown = false;
+    TimeZoneInfo vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+    private DateTime time;
 
-    public static async Task Main(string[] args)
+    public static void Main(string[] args)
+    {
+        WebSocketServerManager server = new WebSocketServerManager();
+        Console.WriteLine("Starting Web Socket Server...");
+        server.RunWebSocketServer().GetAwaiter().GetResult();
+    }
+
+    public async Task RunWebSocketServer()
     {
         try
         {
             //Khởi động Web API
             await WebAPIManager.Instance.InitAPI();
-            Console.WriteLine("Connected to Web API successfully! (http://localhost:55555)");
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Connected to Web API successfully! (http://localhost:55555)");
 
             //Kiểm tra port lắng nghe
             ListenToPort(55556);
-            Console.WriteLine("Started Web Socket Server port: 55556 successfully!");
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Started Web Socket Server port: 55556 successfully!");
 
             //Khởi động Cleanup Loop
-            var cts = new CancellationTokenSource();
-            _ = InitCleanupLoop(cts.Token);
-            Console.WriteLine("Initialized Cleanup Loop successfully!");
+            _ = InitCleanupLoop(shutdownCts.Token);
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Initialized Cleanup Loop successfully!");
 
             //Khởi động Cache
             CacheManager.Instance.InitCache();
-            Console.WriteLine("Initialized Cache successfully!");
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Initialized Cache successfully!");
 
             //Load data
-            Console.WriteLine("Loading data...");
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loading data...");
             await LoadData();
 
+            Task.Run(ListenForQuit);
+
             //Chấp nhận kết nối từ client
-            Console.WriteLine("\nWeb Socket Server is ready!");
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"\n[Server] {time.ToString("hh:mm:ss tt")} Web Socket Server is ready!");
             await AcceptClients();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Fatal error: {ex}");
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Fatal error: {ex}");
 
             throw;
         }
     }
 
-    private static void ListenToPort(int port)
+    private void ListenToPort(int port)
     {
         listener = new HttpListener();
         listener.Prefixes.Add($"http://+:{port}/");
         listener.Start();
     }
-    private static async Task LoadData()
+    private async Task LoadData()
     {
         string loadNPC = $"{WebAPIManager.Instance.GetApiUrl()}/api/load/NPC/full";
         string loadMob = $"{WebAPIManager.Instance.GetApiUrl()}/api/load/Mob/full";
@@ -98,7 +117,8 @@ public class WebSocketServerManager
                 });
             }
         }
-        Console.WriteLine($"Loaded NPC data successfully! [{CacheManager.Instance.GetCountNPC()}]");
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded NPC data successfully! [{CacheManager.Instance.GetCountNPC()}]");
 
         //Load Mob
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(loadMob);
@@ -114,7 +134,8 @@ public class WebSocketServerManager
                 });
             }
         }
-        Console.WriteLine($"Loaded Mob data successfully! [{CacheManager.Instance.GetCountMob()}]");
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Mob data successfully! [{CacheManager.Instance.GetCountMob()}]");
 
         //Load Map
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(loadMap);
@@ -127,7 +148,8 @@ public class WebSocketServerManager
                 CacheManager.Instance.AddMap(map);
             }
         }
-        Console.WriteLine($"Loaded Map data successfully! [{CacheManager.Instance.GetCountMap()}]");
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Map data successfully! [{CacheManager.Instance.GetCountMap()}]");
 
         //Load Item0
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(loadItem0);
@@ -140,7 +162,8 @@ public class WebSocketServerManager
                 CacheManager.Instance.AddItem0(item);
             }
         }
-        Console.WriteLine($"Loaded Item0 data successfully! [{CacheManager.Instance.GetCountItem0()}]");
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Item0 data successfully! [{CacheManager.Instance.GetCountItem0()}]");
 
         //Load Item1
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(loadItem1);
@@ -153,7 +176,8 @@ public class WebSocketServerManager
                 CacheManager.Instance.AddItem1(item);
             }
         }
-        Console.WriteLine($"Loaded Item1 data successfully! [{CacheManager.Instance.GetCountItem1()}]");
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Item1 data successfully! [{CacheManager.Instance.GetCountItem1()}]");
 
         //Load Item2
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(loadItem2);
@@ -169,7 +193,8 @@ public class WebSocketServerManager
                 });
             }
         }
-        Console.WriteLine($"Loaded Item2 data successfully! [{CacheManager.Instance.GetCountItem2()}]");
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Item2 data successfully! [{CacheManager.Instance.GetCountItem2()}]");
 
         //Load Item3
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(loadItem3);
@@ -185,7 +210,8 @@ public class WebSocketServerManager
                 });
             }
         }
-        Console.WriteLine($"Loaded Item3 data successfully! [{CacheManager.Instance.GetCountItem3()}]");
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Item3 data successfully! [{CacheManager.Instance.GetCountItem3()}]");
 
         //Load Item4
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(loadItem4);
@@ -201,12 +227,13 @@ public class WebSocketServerManager
                 });
             }
         }
-        Console.WriteLine($"Loaded Item4 data successfully! [{CacheManager.Instance.GetCountItem4()}]");
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Item4 data successfully! [{CacheManager.Instance.GetCountItem4()}]");
 
-        Console.WriteLine($"Loaded all data successfully!");
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded all data successfully!");
     }
-
-    private static async Task InitCleanupLoop(CancellationToken token)
+    private async Task InitCleanupLoop(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
@@ -223,34 +250,43 @@ public class WebSocketServerManager
             }
         }
     }
-    private static async Task AcceptClients()
+    private async Task AcceptClients()
     {
-        while (true)
+        while (!shutdownCts.IsCancellationRequested)
         {
-            HttpListenerContext context = await listener.GetContextAsync();
-
-            // Kiểm tra đây có phải Web Socket request không
-            if (context.Request.IsWebSocketRequest)
+            try
             {
-                HttpListenerWebSocketContext wsContext = await context.AcceptWebSocketAsync(null);
+                HttpListenerContext context = await listener.GetContextAsync();
 
-                string IPClient = context.Request.RemoteEndPoint?.ToString() ?? "Unknown";
-                var client = new ClientConnection(wsContext.WebSocket, IPClient);
-                Console.WriteLine($"New socket connected! IP Client: {IPClient}");
+                // Kiểm tra đây có phải Web Socket request không
+                if (context.Request.IsWebSocketRequest)
+                {
+                    HttpListenerWebSocketContext wsContext = await context.AcceptWebSocketAsync(null);
 
-                RaceManager.Instance.RegisterClient(client);
-                _ = HandleClient(client);
+                    string IPClient = context.Request.RemoteEndPoint?.ToString() ?? "Unknown";
+                    var client = new ClientConnection(wsContext.WebSocket, IPClient);
+
+                    RaceManager.Instance.RegisterClient(client);
+                    _ = HandleClient(client);
+                }
+                else
+                {
+                    // Nếu không phải Web Socket thì trả về 400
+                    context.Response.StatusCode = 400;
+                    context.Response.Close();
+                }
             }
-            else
+            catch (HttpListenerException)
             {
-                // Nếu không phải Web Socket thì trả về 400
-                context.Response.StatusCode = 400;
-                context.Response.Close();
+                break;
+            }
+            catch (ObjectDisposedException)
+            {
+                break;
             }
         }
     }
-
-    static async Task HandleClient(ClientConnection client)
+    private async Task HandleClient(ClientConnection client)
     {
         var buffer = new byte[4096];
         var messageBuffer = new StringBuilder();
@@ -268,7 +304,7 @@ public class WebSocketServerManager
                         return;
                     }
 
-                    result = await client.socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    result = await client.socket.ReceiveAsync(new ArraySegment<byte>(buffer), shutdownCts.Token);
 
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
@@ -287,23 +323,73 @@ public class WebSocketServerManager
         }
         catch (WebSocketException)
         {
-            // client disconnect bất thường
+
         }
         catch (OperationCanceledException)
         {
-            // server shutdown
+
         }
         finally
         {
-            Console.WriteLine($"Client disconnected! | {client.ipRemote} | state: {client.socket.State}");
             if (client.socket.State != WebSocketState.Closed)
             {
                 RaceManager.Instance.MarkLogOut(client);
             }
         }
     }
+    private void ListenForQuit()
+    {
+        while (!shutdownCts.IsCancellationRequested)
+        {
+            Console.Write("> ");
+            string input = Console.ReadLine();
 
-    public static async Task ReceivePacketFromClient(ClientConnection client, string json)
+            if (input == null)
+                continue;
+
+            if (input == "q")
+            {
+                Console.WriteLine("Do you want to quit? (y/n): ");
+                string confirm = Console.ReadLine();
+
+                if (confirm == null)
+                    continue;
+
+                if (confirm == "y")
+                {
+                    ShutdownServer();
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("Cancel shutdown.");
+                }
+            }
+        }
+    }
+    private void ShutdownServer()
+    {
+        if (isShuttingDown) return;
+        isShuttingDown = true;
+
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Shutting down...");
+
+        // Báo toàn bộ task dừng
+        shutdownCts.Cancel();
+
+        // Logout toàn bộ client
+        RaceManager.Instance.MarkLogOutAll();
+
+        // Stop listener
+        listener.Stop();
+
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Shutdown completed.");
+        Environment.Exit(0);
+    }
+
+    public async Task ReceivePacketFromClient(ClientConnection client, string json)
     {
         try
         {

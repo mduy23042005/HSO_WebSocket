@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -21,12 +20,6 @@ class LogInResultPacket
     public string nameChar;
     public int hair;
     public string message;
-}
-
-class LogOutRequestPacket
-{
-    public string cmd;
-    public int idAccount;
 }
 
 public class LogInController
