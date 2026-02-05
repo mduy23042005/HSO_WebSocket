@@ -17,7 +17,7 @@ public enum Direction
     Left = 2,
     Right = 3,
 }
-public class SyncDataPacket
+public class PlayerDataPacket
 {
     public string cmd;
     public int idAccount;
@@ -50,7 +50,7 @@ public class SyncDataPacket
     public int skin;
 }
 
-class SyncController
+public class PlayerController
 {
     public async Task ReadCacheSyncData(ClientConnection client)
     {

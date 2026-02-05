@@ -38,6 +38,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -52,7 +53,7 @@
     <Compile Include="Controllers\MobsController.cs" />
     <Compile Include="Controllers\ReadAttributesController.cs" />
     <Compile Include="Controllers\RegisterController.cs" />
-    <Compile Include="Controllers\SyncDataController.cs" />
+    <Compile Include="Controllers\PlayerController.cs" />
     <Compile Include="Manager\CacheManager.cs" />
     <Compile Include="Manager\RaceManager.cs" />
     <Compile Include="Manager\WebAPIManager.cs" />

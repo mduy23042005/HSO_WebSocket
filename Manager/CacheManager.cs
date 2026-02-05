@@ -4,48 +4,57 @@ using System.Collections.Generic;
 public class NPCData
 {
     public NPC npcs;
+    public int posX;
+    public int posY;
 }
 public class MobData
 {
     public Mob mobs;
+    public int id;
+    public int posX;
+    public int posY;
+
+    public MobsController mobsAI;
 }
+
 public class MapData
 {
     public Map maps;
-    public List<Map_Mob> map_Mobs;
-    public List<Map_NPC> map_NPCs;
+    public List<MobData> mobsData;
+    public List<NPCData> npcsData;
 }
 
 //Trang bị riêng từng school
 public class Item0Data
 {
-    public Item0 item0;
+    public Item0 item0s;
     public List<Item0_Attribute> item0_Attributes;
     public List<Attribute> nameAttributes;
 }
 //Trang bị chung
 public class Item1Data
 {
-    public Item1 item1;
+    public Item1 item1s;
     public List<Item1_Attribute> item1_Attributes;
     public List<Attribute> nameAttributes;
 }
 //Vật phẩm nhiệm vụ
 public class Item2Data
 {
-    public Item2 item2;
+    public Item2 item2s;
 }
 //Vật phẩm tiêu hao
 public class Item3Data
 {
-    public Item3 item3;
+    public Item3 item3s;
 }
 //Vật phẩm cường hóa
 public class Item4Data
 {
-    public Item4 item4;
+    public Item4 item4s;
 }
 
+//Tài nguyên của player
 public class EquipmentData
 {
     public int id;
@@ -100,7 +109,7 @@ public class AccountData
     public List<InventoryItem4Data> inventoryItem4s;
     public Chest chest;
 
-    public SyncDataPacket syncData;
+    public PlayerDataPacket syncData;
 }
 
 public class CacheManager
@@ -183,7 +192,7 @@ public class CacheManager
     //Item0
     public void AddItem0(Item0Data data)
     {
-        items0[data.item0.IDItem0] = data;
+        items0[data.item0s.IDItem0] = data;
     }
     public Item0Data GetItem0(int id)
     {
@@ -198,7 +207,7 @@ public class CacheManager
     //Item1
     public void AddItem1(Item1Data data)
     {
-        items1[data.item1.IDItem1] = data;
+        items1[data.item1s.IDItem1] = data;
     }
     public Item1Data GetItem1(int id)
     {
@@ -213,7 +222,7 @@ public class CacheManager
     //Item2
     public void AddItem2(Item2Data data)
     {
-        items2[data.item2.IDItem2] = data;
+        items2[data.item2s.IDItem2] = data;
     }
     public Item2Data GetItem2(int id)
     {
@@ -228,7 +237,7 @@ public class CacheManager
     //Item3
     public void AddItem3(Item3Data data)
     {
-        items3[data.item3.IDItem3] = data;
+        items3[data.item3s.IDItem3] = data;
     }
     public Item3Data GetItem3(int id)
     {
@@ -243,7 +252,7 @@ public class CacheManager
     //Item4
     public void AddItem4(Item4Data data)
     {
-        items4[data.item4.IDItem4] = data;
+        items4[data.item4s.IDItem4] = data;
     }
     public Item4Data GetItem4(int id)
     {

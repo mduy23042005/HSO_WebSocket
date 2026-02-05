@@ -67,6 +67,9 @@ public class WebSocketServerManager
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loading data...");
             await LoadData();
 
+            _ = SyncMobsLoop();
+            Console.WriteLine("[Server] SyncMob loop started.");
+
             Task.Run(ListenForQuit);
 
             //Chấp nhận kết nối từ client
@@ -145,8 +148,17 @@ public class WebSocketServerManager
         {
             foreach (var map in mapList)
             {
+                if (map.mobsData != null)
+                {
+                    foreach (var mob in map.mobsData)
+                    {
+                        mob.mobsAI = new MobsController(mob.posX, mob.posY, 6, 6);
+                    }
+                }
+
                 CacheManager.Instance.AddMap(map);
             }
+
         }
         time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
         Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Map data successfully! [{CacheManager.Instance.GetCountMap()}]");
@@ -189,7 +201,7 @@ public class WebSocketServerManager
             {
                 CacheManager.Instance.AddItem2(new Item2Data
                 {
-                    item2 = item
+                    item2s = item
                 });
             }
         }
@@ -206,7 +218,7 @@ public class WebSocketServerManager
             {
                 CacheManager.Instance.AddItem3(new Item3Data
                 {
-                    item3 = item
+                    item3s = item
                 });
             }
         }
@@ -223,7 +235,7 @@ public class WebSocketServerManager
             {
                 CacheManager.Instance.AddItem4(new Item4Data
                 {
-                    item4 = item
+                    item4s = item
                 });
             }
         }
@@ -388,6 +400,68 @@ public class WebSocketServerManager
         Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Shutdown completed.");
         Environment.Exit(0);
     }
+    private async Task SyncMobsLoop()
+    {
+        const int tick_ms = 100; // 10 tick / giây
+        DateTime lastTick = DateTime.UtcNow;
+
+        while (!shutdownCts.IsCancellationRequested)
+        {
+            try
+            {
+                DateTime now = DateTime.UtcNow;
+                float deltaTime = (float)(now - lastTick).TotalSeconds;
+                lastTick = now;
+
+                // Update mob logic
+                var mobs = CacheManager.Instance.GetMap(1).mobsData; //tạm thời là mà map có id 1, sau này khi main player ở map nào thì gửi map đó
+                foreach (var mob in mobs)
+                {
+                    mob.mobsAI.Attack(deltaTime);
+                    mob.mobsAI.Move(deltaTime);
+                }
+
+                // Build sync packet
+                var mobSnapshots = new List<object>();
+                foreach (var mob in mobs)
+                {
+                    var pos = mob.mobsAI.GetPosition();
+                    mobSnapshots.Add(new
+                    {
+                        id = mob.id,
+                        idMob = mob.mobs.IDMob,
+                        posX = pos.X,
+                        posY = pos.Y,
+                        state = mob.mobsAI.GetState(),
+                        idState = mob.mobsAI.GetIDState(),
+                        direction = mob.mobsAI.GetDirection(),
+                    });
+                }
+
+                if (mobSnapshots.Count > 0)
+                {
+                    var syncMobData = new
+                    {
+                        cmd = "syncMobs",
+                        mobsData = mobSnapshots
+                    };
+
+                    string packet = JsonConvert.SerializeObject(syncMobData);
+                    await RaceManager.Instance.SendPacketToAllClients(packet);
+                }
+
+                await Task.Delay(tick_ms, shutdownCts.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[SyncMob] Error: " + ex.Message);
+            }
+        }
+    }
 
     public async Task ReceivePacketFromClient(ClientConnection client, string json)
     {
@@ -413,7 +487,7 @@ public class WebSocketServerManager
             {
                 case "syncData":
                     {
-                        var syncPacket = JsonConvert.DeserializeObject<SyncDataPacket>(json);
+                        var syncPacket = JsonConvert.DeserializeObject<PlayerDataPacket>(json);
                         int idAccount = RaceManager.Instance.GetIDAccount(client);
 
                         var accountData = CacheManager.Instance.GetAccountData(idAccount);
@@ -422,8 +496,8 @@ public class WebSocketServerManager
                             accountData.syncData = syncPacket;
                         }
 
-                        var syncController = new SyncController();
-                        await syncController.ReadCacheSyncData(client);
+                        var syncOtherPlayers = new PlayerController();
+                        await syncOtherPlayers.ReadCacheSyncData(client);
                         break;
                     }
 
