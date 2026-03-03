@@ -28,7 +28,7 @@ public class WebSocketServerManager
     private HttpListener listener;
     private CancellationTokenSource shutdownCts = new CancellationTokenSource();
     private volatile bool isShuttingDown = false;
-    TimeZoneInfo vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+    private TimeZoneInfo vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
     private DateTime time;
 
     public static void Main(string[] args)
@@ -38,7 +38,7 @@ public class WebSocketServerManager
         server.RunWebSocketServer().GetAwaiter().GetResult();
     }
 
-    public async Task RunWebSocketServer()
+    private async Task RunWebSocketServer()
     {
         try
         {
@@ -52,7 +52,7 @@ public class WebSocketServerManager
             time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Started Web Socket Server port: 55556 successfully!");
 
-            //Khởi động Cleanup Loop
+            //Khởi động Cleanup Loop để dọn dẹp client ngắt kết nối thụ động
             _ = InitCleanupLoop(shutdownCts.Token);
             time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Initialized Cleanup Loop successfully!");
@@ -68,7 +68,10 @@ public class WebSocketServerManager
             await LoadData();
 
             _ = SyncMobsLoop();
-            Console.WriteLine("[Server] SyncMob loop started.");
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} SyncMob loop started.");
+
+            _ = SyncOtherPlayersLoop();
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} SyncOtherPlayers loop started.");
 
             Task.Run(ListenForQuit);
 
@@ -116,7 +119,7 @@ public class WebSocketServerManager
             {
                 CacheManager.Instance.AddNPC(new NPCData
                 {
-                    npcs = npc
+                    npc = npc
                 });
             }
         }
@@ -133,7 +136,7 @@ public class WebSocketServerManager
             {
                 CacheManager.Instance.AddMob(new MobData
                 {
-                    mobs = mob
+                    mob = mob
                 });
             }
         }
@@ -155,10 +158,8 @@ public class WebSocketServerManager
                         mob.mobsAI = new MobsController(mob.posX, mob.posY, 6, 6);
                     }
                 }
-
                 CacheManager.Instance.AddMap(map);
             }
-
         }
         time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
         Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Map data successfully! [{CacheManager.Instance.GetCountMap()}]");
@@ -201,7 +202,7 @@ public class WebSocketServerManager
             {
                 CacheManager.Instance.AddItem2(new Item2Data
                 {
-                    item2s = item
+                    item2 = item
                 });
             }
         }
@@ -218,7 +219,7 @@ public class WebSocketServerManager
             {
                 CacheManager.Instance.AddItem3(new Item3Data
                 {
-                    item3s = item
+                    item3 = item
                 });
             }
         }
@@ -235,7 +236,7 @@ public class WebSocketServerManager
             {
                 CacheManager.Instance.AddItem4(new Item4Data
                 {
-                    item4s = item
+                    item4 = item
                 });
             }
         }
@@ -349,11 +350,132 @@ public class WebSocketServerManager
             }
         }
     }
+    private async Task SyncMobsLoop()
+    {
+        const int targetTickRate = 30;
+        const int tickMS = 1000 / targetTickRate;
+
+        var stopwatch = new System.Diagnostics.Stopwatch();
+
+        while (!shutdownCts.IsCancellationRequested)
+        {
+            stopwatch.Restart();
+            try
+            {
+                float deltaTime = 1f / targetTickRate;
+
+                // Update mob logic
+                var mobs = CacheManager.Instance.GetMap(1).mobsData.ToArray(); //tạm thời là mà map có id 1, sau này khi main player ở map nào thì gửi map đó
+                foreach (var mob in mobs)
+                {
+                    mob.mobsAI.Attack(deltaTime);
+                    mob.mobsAI.Move(deltaTime);
+                }
+
+                // Build sync packet
+                var mobSnapshots = new List<object>();
+                foreach (var mob in mobs)
+                {
+                    var pos = mob.mobsAI.GetPosition();
+                    mobSnapshots.Add(new
+                    {
+                        id = mob.id,
+                        idMob = mob.mob.IDMob,
+                        posX = pos.X,
+                        posY = pos.Y,
+                        state = mob.mobsAI.GetState(),
+                        idState = mob.mobsAI.GetIDState(),
+                        direction = mob.mobsAI.GetDirection(),
+                    });
+                }
+
+                if (mobSnapshots.Count > 0)
+                {
+                    var syncMobData = new
+                    {
+                        cmd = "syncMobs",
+                        mobsData = mobSnapshots
+                    };
+
+                    await RaceManager.Instance.SendPacketToAllClients(syncMobData);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[SyncMob] Error: " + ex.Message);
+            }
+
+            stopwatch.Stop();
+            int sleep = tickMS - (int)stopwatch.ElapsedMilliseconds;
+            if (sleep > 0)
+                await Task.Delay(sleep, shutdownCts.Token);
+        }
+    }
+    private async Task SyncOtherPlayersLoop()
+    {
+        const int targetTickRate = 30;
+        const int tickMS = 1000 / targetTickRate;
+
+        var stopwatch = new System.Diagnostics.Stopwatch();
+
+        while (!shutdownCts.IsCancellationRequested)
+        {
+            stopwatch.Restart();
+
+            try
+            {
+                // Lấy snapshot player từ cache
+                var playerSnapshots = new List<PlayerData>();
+
+                var clients = RaceManager.Instance.GetAllClients();
+                foreach (var client in clients)
+                {
+                    int idAccount = RaceManager.Instance.GetIDAccount(client);
+                    if (idAccount <= 0)
+                        continue;
+
+                    var accountData = CacheManager.Instance.GetAccountData(idAccount);
+                    if (accountData?.playerStateData == null)
+                        continue;
+
+                    playerSnapshots.Add(accountData.playerStateData);
+                }
+
+                if (playerSnapshots.Count > 0)
+                {
+                    var syncPlayerData = new
+                    {
+                        cmd = "syncOtherPlayers",
+                        otherPlayersData = playerSnapshots
+                    };
+
+                    await RaceManager.Instance.SendPacketToAllClients(syncPlayerData);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[SyncPlayer] Error: " + ex.Message);
+            }
+
+            stopwatch.Stop();
+            int sleep = tickMS - (int)stopwatch.ElapsedMilliseconds;
+            if (sleep > 0)
+                await Task.Delay(sleep, shutdownCts.Token);
+        }
+    }
+    
     private void ListenForQuit()
     {
         while (!shutdownCts.IsCancellationRequested)
         {
-            Console.Write("> ");
             string input = Console.ReadLine();
 
             if (input == null)
@@ -400,70 +522,8 @@ public class WebSocketServerManager
         Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Shutdown completed.");
         Environment.Exit(0);
     }
-    private async Task SyncMobsLoop()
-    {
-        const int tick_ms = 100; // 10 tick / giây
-        DateTime lastTick = DateTime.UtcNow;
 
-        while (!shutdownCts.IsCancellationRequested)
-        {
-            try
-            {
-                DateTime now = DateTime.UtcNow;
-                float deltaTime = (float)(now - lastTick).TotalSeconds;
-                lastTick = now;
-
-                // Update mob logic
-                var mobs = CacheManager.Instance.GetMap(1).mobsData; //tạm thời là mà map có id 1, sau này khi main player ở map nào thì gửi map đó
-                foreach (var mob in mobs)
-                {
-                    mob.mobsAI.Attack(deltaTime);
-                    mob.mobsAI.Move(deltaTime);
-                }
-
-                // Build sync packet
-                var mobSnapshots = new List<object>();
-                foreach (var mob in mobs)
-                {
-                    var pos = mob.mobsAI.GetPosition();
-                    mobSnapshots.Add(new
-                    {
-                        id = mob.id,
-                        idMob = mob.mobs.IDMob,
-                        posX = pos.X,
-                        posY = pos.Y,
-                        state = mob.mobsAI.GetState(),
-                        idState = mob.mobsAI.GetIDState(),
-                        direction = mob.mobsAI.GetDirection(),
-                    });
-                }
-
-                if (mobSnapshots.Count > 0)
-                {
-                    var syncMobData = new
-                    {
-                        cmd = "syncMobs",
-                        mobsData = mobSnapshots
-                    };
-
-                    string packet = JsonConvert.SerializeObject(syncMobData);
-                    await RaceManager.Instance.SendPacketToAllClients(packet);
-                }
-
-                await Task.Delay(tick_ms, shutdownCts.Token);
-            }
-            catch (TaskCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("[SyncMob] Error: " + ex.Message);
-            }
-        }
-    }
-
-    public async Task ReceivePacketFromClient(ClientConnection client, string json)
+    private async Task ReceivePacketFromClient(ClientConnection client, string json)
     {
         try
         {
@@ -485,19 +545,14 @@ public class WebSocketServerManager
             }
             switch (cmd)
             {
-                case "syncData":
+                case "syncPlayerData":
                     {
-                        var syncPacket = JsonConvert.DeserializeObject<PlayerDataPacket>(json);
-                        int idAccount = RaceManager.Instance.GetIDAccount(client);
-
-                        var accountData = CacheManager.Instance.GetAccountData(idAccount);
+                        var syncPacket = JsonConvert.DeserializeObject<SyncPlayerRequestPacket>(json);
+                        var accountData = CacheManager.Instance.GetAccountData(syncPacket.playerData.idAccount);
                         if (accountData != null)
                         {
-                            accountData.syncData = syncPacket;
+                            accountData.playerStateData = syncPacket.playerData;
                         }
-
-                        var syncOtherPlayers = new PlayerController();
-                        await syncOtherPlayers.ReadCacheSyncData(client);
                         break;
                     }
 
@@ -507,8 +562,9 @@ public class WebSocketServerManager
                     await loginController.ClickLogIn(client, loginPacket.username, loginPacket.password);
                     break;
                 case "logout":
-                    RaceManager.Instance.MarkLogOut(client);
-                    await RaceManager.Instance.SendPacketToClient(client, json);
+                    var logoutPacket = JsonConvert.DeserializeObject<LogOutRequestPacket>(json);
+                    await RaceManager.Instance.SendPacketToClient(client, logoutPacket);
+                    RaceManager.Instance.ForceLogout(client);
                     return;
 
                 case "register":

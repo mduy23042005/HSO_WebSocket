@@ -1,4 +1,4 @@
-﻿
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
@@ -88,9 +88,9 @@ public sealed class RaceManager
         }
     }
 
-    public async Task SendPacketToAllClients(string packet, ClientConnection excludedClient = null)
+    public async Task SendPacketToAllClients<T>(T data, ClientConnection excludedClient = null)
     {
-        if (string.IsNullOrEmpty(packet))
+        if (data == null)
             return;
 
         List<ClientConnection> snapshot = CreateClientSnapshot();
@@ -101,15 +101,15 @@ public sealed class RaceManager
             if (client == excludedClient)
                 continue;
 
-            if (client.socket.State != WebSocketState.Open)
+            if (client.socket == null || client.socket.State != WebSocketState.Open)
                 continue;
 
-            tasks.Add(SendPacketToClient(client, packet));
+            tasks.Add(SendPacketToClient(client, data));
         }
 
         await Task.WhenAll(tasks);
     }
-    public async Task SendPacketToClient(ClientConnection targetClient, string packet)
+    public async Task SendPacketToClient<T>(ClientConnection targetClient, T data)
     {
         if (targetClient == null)
             return;
@@ -117,7 +117,7 @@ public sealed class RaceManager
         if (targetClient.socket.State != WebSocketState.Open)
             return;
 
-        if (string.IsNullOrEmpty(packet))
+        if (data == null)
             return;
 
         SemaphoreSlim sendLock;
@@ -130,9 +130,11 @@ public sealed class RaceManager
         try
         {
             await sendLock.WaitAsync();
+
             if (targetClient.socket.State != WebSocketState.Open)
                 return;
 
+            string packet = JsonConvert.SerializeObject(data);
             byte[] packetBytes = Encoding.UTF8.GetBytes(packet);
 
             if (targetClient.socket.State == WebSocketState.Open)
@@ -192,6 +194,38 @@ public sealed class RaceManager
         lock (clientCollectionLock)
         {
             logoutClients.Add(client);
+        }
+    }
+
+    // dọn dẹp client ngắt kết nối chủ động
+    public void ForceLogout(ClientConnection client)
+    {
+        if (client == null) return;
+
+        int idAccount = GetIDAccount(client);
+        if (idAccount != 0)
+        {
+            CacheManager.Instance.RemoveAccountData(idAccount);
+        }
+
+        try
+        {
+            if (client.socket.State == WebSocketState.Open)
+            {
+                client.socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Logout", CancellationToken.None).Wait();
+            }
+        }
+        catch { }
+
+        UnregisterClient(client);
+        client.socket.Dispose();
+    }
+
+    public List<ClientConnection> GetAllClients()
+    {
+        lock (clientCollectionLock)
+        {
+            return new List<ClientConnection>(connectedClients);
         }
     }
 

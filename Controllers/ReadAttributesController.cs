@@ -1,7 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
+﻿using System;
 using System.Threading.Tasks;
 
 public class ReadAttributesEquipmentRequestPacket
@@ -14,12 +11,7 @@ public class ReadAttributesEquipmentRequestPacket
 public class ReadAttributesEquipmentResultPacket
 {
     public string cmd;
-    public int idItem0_1;
-    public int category;
-    public string nameItem;
-    public int value;
-    public int idAttribute;
-    public string attributes;
+    public EquipmentData attributesData;
 }
 
 public class ReadAttributesInventoryRequestPacket
@@ -32,13 +24,11 @@ public class ReadAttributesInventoryRequestPacket
 public class ReadAttributesInventoryResultPacket
 {
     public string cmd;
-    public int idItem0;
-    public int category;
-    public string nameItem;
-    public string typeItem0;
-    public int value;
-    public int idAttribute;
-    public string attributes;
+    public InventoryItem0Data attributesItem0Data;
+    public InventoryItem1Data attributesItem1Data;
+    public InventoryItem2Data attributesItem2Data;
+    public InventoryItem3Data attributesItem3Data;
+    public InventoryItem4Data attributesItem4Data;
 }
 
 public class EquipItem0RequestPacket
@@ -60,25 +50,24 @@ class ReadAttributesController
         {
             var equipmentData = CacheManager.Instance.GetAccountData(idAccount).equipments.Find(x => x.id == id);
 
-            List<ReadAttributesEquipmentResultPacket> equipmentResult = new List<ReadAttributesEquipmentResultPacket>();
-
-            foreach (var attribute in equipmentData.item0_Attributes)
+            ReadAttributesEquipmentResultPacket equipmentAttributesResult = new ReadAttributesEquipmentResultPacket
             {
-                var nameAttribute = equipmentData.nameAttributes.Find(x => x.IDAttribute == attribute.IDAttribute).NameAttribute;
-                equipmentResult.Add(new ReadAttributesEquipmentResultPacket
-                {
-                    cmd = "equipmentAttributes_result",
-                    idItem0_1 = equipmentData.idItem0_1,
-                    category = equipmentData.category,
-                    nameItem = equipmentData.nameItem0_1,
+                cmd = "equipmentAttributes_result",
+                attributesData = new EquipmentData()
+            };
 
-                    value = attribute.Value,
-                    attributes = nameAttribute,
-                });
-            }
+            equipmentAttributesResult.attributesData = new EquipmentData
+            {
+                id = equipmentData.id,
+                idItem0_1 = equipmentData.idItem0_1,
+                nameItem0_1 = equipmentData.nameItem0_1,
+                category = equipmentData.category,
+                slotName = equipmentData.slotName,
+                item0_Attributes = equipmentData.item0_Attributes,
+                nameAttributes = equipmentData.nameAttributes
+            };
 
-            string packet = JsonConvert.SerializeObject(equipmentResult);
-            await RaceManager.Instance.SendPacketToClient(client, packet);
+            await RaceManager.Instance.SendPacketToClient(client, equipmentAttributesResult);
         }
         catch (Exception ex)
         {
@@ -94,26 +83,32 @@ class ReadAttributesController
         {
             var inventoryItem0Data = CacheManager.Instance.GetAccountData(idAccount).inventoryItem0s.Find(x => x.id == id);
 
-            List<ReadAttributesInventoryResultPacket> inventoryResult = new List<ReadAttributesInventoryResultPacket>();
+            ReadAttributesInventoryResultPacket inventoryAttributesResult = new ReadAttributesInventoryResultPacket();
 
-            foreach (var attribute in inventoryItem0Data.item0_Attributes)
+            inventoryAttributesResult = new ReadAttributesInventoryResultPacket
             {
-                var nameAttribute = inventoryItem0Data.nameAttributes.Find(x => x.IDAttribute == attribute.IDAttribute).NameAttribute;
+                cmd = "inventoryAttributes_result",
+                attributesItem0Data = new InventoryItem0Data(),
+                attributesItem1Data = new InventoryItem1Data(),
+                attributesItem2Data = new InventoryItem2Data(),
+                attributesItem3Data = new InventoryItem3Data(),
+                attributesItem4Data = new InventoryItem4Data(),
+            };
 
-                inventoryResult.Add(new ReadAttributesInventoryResultPacket
-                {
-                    cmd = "inventoryAttributes_result",
-                    idItem0 = inventoryItem0Data.idItem0,
-                    category = inventoryItem0Data.category,
-                    typeItem0 = inventoryItem0Data.typeItem0,
-                    nameItem = inventoryItem0Data.nameItem0,
-                    value = attribute.Value,
-                    attributes = nameAttribute
-                });
-            }
+            inventoryAttributesResult.attributesItem0Data = new InventoryItem0Data
+            {
+                id = inventoryItem0Data.id,
+                idItem0 = inventoryItem0Data.idItem0,
+                nameItem0 = inventoryItem0Data.nameItem0,
+                typeItem0 = inventoryItem0Data.typeItem0,
+                category = inventoryItem0Data.category,
+                idSchool = inventoryItem0Data.idSchool,
+                level = inventoryItem0Data.level,
+                item0_Attributes = inventoryItem0Data.item0_Attributes,
+                nameAttributes = inventoryItem0Data.nameAttributes
+            };
 
-            string packet = JsonConvert.SerializeObject(inventoryResult);
-            await RaceManager.Instance.SendPacketToClient(client, packet);
+            await RaceManager.Instance.SendPacketToClient(client, inventoryAttributesResult);
         }
         catch (Exception ex)
         {

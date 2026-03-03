@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;
 using System.Net.Http;
-using System.Net.WebSockets;
 
 public class RegisterRequestPacket
 {
@@ -20,6 +19,7 @@ public class RegisterResultPacket
     public string cmd;
     public bool success;
 }
+
 class RegisterController
 {
     public async Task ClickRegister(ClientConnection client, int idSchool, string username, string password, string nameChar, int hair, int blessingPoints)
@@ -127,7 +127,6 @@ class RegisterController
             };
         }
 
-        string packet = JsonConvert.SerializeObject(registerResult);
-        await RaceManager.Instance.SendPacketToClient(client, packet);
+        await RaceManager.Instance.SendPacketToClient(client, registerResult);
     }
 }

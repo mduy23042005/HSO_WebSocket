@@ -17,7 +17,6 @@ public class SyncMobsResultPacket
     public string cmd;
     public List<SyncMobsResultPacket> mobs;
 }
-
 public class MobsController
 {
     private float moveSpeed = 2f;
@@ -117,7 +116,7 @@ public class MobsController
 
         foreach (var kv in CacheManager.Instance.accounts)
         {
-            var playerData = kv.Value.syncData;
+            var playerData = kv.Value.playerStateData;
             if (playerData == null) continue;
 
             Vector2 playerPos = new Vector2(playerData.posX, playerData.posY);
@@ -152,7 +151,7 @@ public class MobsController
         }
 
         var account = CacheManager.Instance.GetAccountData(targetPlayerId);
-        if (account == null || account.syncData == null)
+        if (account == null || account.playerStateData == null)
         {
             targetPlayerId = -1;
             isAttacking = false;
@@ -160,7 +159,7 @@ public class MobsController
             return;
         }
 
-        Vector2 playerPos = new Vector2(account.syncData.posX, account.syncData.posY);
+        Vector2 playerPos = new Vector2(account.playerStateData.posX, account.playerStateData.posY);
         Vector2 dir = playerPos - position;
         float distSq = dir.LengthSquared();
 
@@ -219,4 +218,3 @@ public class MobsController
         return 1;
     }
 }
-

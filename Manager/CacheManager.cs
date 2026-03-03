@@ -3,23 +3,22 @@ using System.Collections.Generic;
 
 public class NPCData
 {
-    public NPC npcs;
+    public NPC npc;
     public int posX;
     public int posY;
 }
 public class MobData
 {
-    public Mob mobs;
+    public Mob mob;
     public int id;
     public int posX;
     public int posY;
 
     public MobsController mobsAI;
 }
-
 public class MapData
 {
-    public Map maps;
+    public Map map;
     public List<MobData> mobsData;
     public List<NPCData> npcsData;
 }
@@ -27,31 +26,31 @@ public class MapData
 //Trang bị riêng từng school
 public class Item0Data
 {
-    public Item0 item0s;
+    public Item0 item0;
     public List<Item0_Attribute> item0_Attributes;
     public List<Attribute> nameAttributes;
 }
 //Trang bị chung
 public class Item1Data
 {
-    public Item1 item1s;
+    public Item1 item1;
     public List<Item1_Attribute> item1_Attributes;
     public List<Attribute> nameAttributes;
 }
 //Vật phẩm nhiệm vụ
 public class Item2Data
 {
-    public Item2 item2s;
+    public Item2 item2;
 }
 //Vật phẩm tiêu hao
 public class Item3Data
 {
-    public Item3 item3s;
+    public Item3 item3;
 }
 //Vật phẩm cường hóa
 public class Item4Data
 {
-    public Item4 item4s;
+    public Item4 item4;
 }
 
 //Tài nguyên của player
@@ -73,30 +72,96 @@ public class InventoryItem0Data
     public string typeItem0;
     public int category;
     public int idSchool;
+    public int level;
     public List<Item0_Attribute> item0_Attributes;
     public List<Attribute> nameAttributes;
 }
 public class InventoryItem1Data
 {
-    public Account_Item1 item1Data;
+    public int id;
+    public int idItem1;
+    public string nameItem1;
+    public string typeItem1;
+    public int level;
     public List<Item1_Attribute> item1_Attributes;
     public List<Attribute> nameAttributes;
 }
 public class InventoryItem2Data
 {
-    public Account_Item2 item2Data;
+    public int id;
+    public int idItem2;
+    public string nameItem2;
+    public int level;
+    public int quality;
 }
 public class InventoryItem3Data
 {
-    public Account_Item3 item3Data;
+    public int id;
+    public int idItem3;
+    public string nameItem3;
+    public int level;
+    public string details;
+    public int quality;
 }
 public class InventoryItem4Data
 {
-    public Account_Item4 item4Data;
+    public int id;
+    public int idItem4;
+    public string nameItem4;
+    public int level;
+    public string details;
+    public int quality;
 }
 public class ChestData
 {
     public List<Chest_ItemX> chestItems;
+}
+
+public enum PlayerState
+{
+    Stand = 0,
+    Move = 1,
+    Attack = 2,
+    Injured = 3,
+    Die = 4
+}
+public enum Direction
+{
+    Front = 0,
+    Back = 1,
+    Left = 2,
+    Right = 3,
+}
+public class PlayerData
+{
+    public int idAccount;
+    public float posX;
+    public float posY;
+    public float lastPosX;
+    public float lastPosY;
+    public PlayerState state;
+    public Direction direction;
+    public int frame;
+    public string nameChar;
+    public int level;
+    public int idSchool;
+    public int hair;
+    public int weapon;
+    public int helmet;
+    public int armor;
+    public int legArmor;
+    public int gloves;
+    public int shoes;
+    public int ring1;
+    public int ring2;
+    public int necklace;
+    public int medal;
+    public int cloak;
+    public int wing;
+    public int skinWing;
+    public int mounts;
+    public int pet;
+    public int skin;
 }
 public class AccountData
 {
@@ -109,7 +174,7 @@ public class AccountData
     public List<InventoryItem4Data> inventoryItem4s;
     public Chest chest;
 
-    public PlayerDataPacket syncData;
+    public PlayerData playerStateData;
 }
 
 public class CacheManager
@@ -121,11 +186,11 @@ public class CacheManager
     public Dictionary<int, MobData> mobs;
     public Dictionary<int, NPCData> npcs;
 
-    public Dictionary<int, Item0Data> items0;
-    public Dictionary<int, Item1Data> items1;
-    public Dictionary<int, Item2Data> items2;
-    public Dictionary<int, Item3Data> items3;
-    public Dictionary<int, Item4Data> items4;
+    public Dictionary<int, Item0Data> item0s;
+    public Dictionary<int, Item1Data> item1s;
+    public Dictionary<int, Item2Data> item2s;
+    public Dictionary<int, Item3Data> item3s;
+    public Dictionary<int, Item4Data> item4s;
 
     public Dictionary<int, AccountData> accounts;
 
@@ -135,11 +200,11 @@ public class CacheManager
         mobs = new Dictionary<int, MobData>();
         npcs = new Dictionary<int, NPCData>();
 
-        items0 = new Dictionary<int, Item0Data>();
-        items1 = new Dictionary<int, Item1Data>();
-        items2 = new Dictionary<int, Item2Data>();
-        items3 = new Dictionary<int, Item3Data>();
-        items4 = new Dictionary<int, Item4Data>();
+        item0s = new Dictionary<int, Item0Data>();
+        item1s = new Dictionary<int, Item1Data>();
+        item2s = new Dictionary<int, Item2Data>();
+        item3s = new Dictionary<int, Item3Data>();
+        item4s = new Dictionary<int, Item4Data>();
 
         accounts = new Dictionary<int, AccountData>();
     }
@@ -147,7 +212,7 @@ public class CacheManager
     //Map
     public void AddMap(MapData data)
     {
-        maps[data.maps.IDMap] = data;
+        maps[data.map.IDMap] = data;
     }
     public MapData GetMap(int mapId)
     {
@@ -162,7 +227,7 @@ public class CacheManager
     //Mob
     public void AddMob(MobData data)
     {
-        mobs[data.mobs.IDMob] = data;
+        mobs[data.mob.IDMob] = data;
     }
     public MobData GetMob(int mobId)
     {
@@ -177,7 +242,7 @@ public class CacheManager
     //NPC
     public void AddNPC(NPCData data)
     {
-        npcs[data.npcs.IDNPC] = data;
+        npcs[data.npc.IDNPC] = data;
     }
     public NPCData GetNPC(int npcId)
     {
@@ -192,76 +257,76 @@ public class CacheManager
     //Item0
     public void AddItem0(Item0Data data)
     {
-        items0[data.item0s.IDItem0] = data;
+        item0s[data.item0.IDItem0] = data;
     }
     public Item0Data GetItem0(int id)
     {
-        items0.TryGetValue(id, out var data);
+        item0s.TryGetValue(id, out var data);
         return data;
     }
     public int GetCountItem0()
     {
-        return items0.Count;
+        return item0s.Count;
     }
 
     //Item1
     public void AddItem1(Item1Data data)
     {
-        items1[data.item1s.IDItem1] = data;
+        item1s[data.item1.IDItem1] = data;
     }
     public Item1Data GetItem1(int id)
     {
-        items1.TryGetValue(id, out var data);
+        item1s.TryGetValue(id, out var data);
         return data;
     }
     public int GetCountItem1()
     {
-        return items1.Count;
+        return item1s.Count;
     }
 
     //Item2
     public void AddItem2(Item2Data data)
     {
-        items2[data.item2s.IDItem2] = data;
+        item2s[data.item2.IDItem2] = data;
     }
     public Item2Data GetItem2(int id)
     {
-        items2.TryGetValue(id, out var data);
+        item2s.TryGetValue(id, out var data);
         return data;
     }
     public int GetCountItem2()
     {
-        return items2.Count;
+        return item2s.Count;
     }
 
     //Item3
     public void AddItem3(Item3Data data)
     {
-        items3[data.item3s.IDItem3] = data;
+        item3s[data.item3.IDItem3] = data;
     }
     public Item3Data GetItem3(int id)
     {
-        items3.TryGetValue(id, out var data);
+        item3s.TryGetValue(id, out var data);
         return data;
     }
     public int GetCountItem3()
     {
-        return items3.Count;
+        return item3s.Count;
     }
 
     //Item4
     public void AddItem4(Item4Data data)
     {
-        items4[data.item4s.IDItem4] = data;
+        item4s[data.item4.IDItem4] = data;
     }
     public Item4Data GetItem4(int id)
     {
-        items4.TryGetValue(id, out var data);
+        item4s.TryGetValue(id, out var data);
         return data;
     }
     public int GetCountItem4()
     {
-        return items4.Count;
+        return item4s.Count;
     }
 
     //Account

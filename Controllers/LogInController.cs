@@ -22,6 +22,12 @@ class LogInResultPacket
     public string message;
 }
 
+public class LogOutRequestPacket
+{
+    public string cmd;
+    public int idAccount;
+}
+
 public class LogInController
 {
     public async Task ClickLogIn(ClientConnection client, string username, string password)
@@ -48,8 +54,7 @@ public class LogInController
                     message = "Account is already logged in another client."
                 };
 
-                string packetDeny = JsonConvert.SerializeObject(loginResult);
-                await RaceManager.Instance.SendPacketToClient(client, packetDeny);
+                await RaceManager.Instance.SendPacketToClient(client, loginResult);
                 return;
             }
 
@@ -82,8 +87,7 @@ public class LogInController
             return;
         }
 
-        string packet = JsonConvert.SerializeObject(loginResult);
-        await RaceManager.Instance.SendPacketToClient(client, packet);
+        await RaceManager.Instance.SendPacketToClient(client, loginResult);
     }
     private async Task LoadAccountData(Account acc)
     {

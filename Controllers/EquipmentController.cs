@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -11,11 +10,7 @@ public class EquipmentRequestPacket
 public class EquipmentResultPacket
 {
     public string cmd;
-    public int id;
-    public int idItem0_1;
-    public int category;
-    public List<Item0_Attribute> item0_Attributes;
-    public List<Attribute> nameAttributes;
+    public List<EquipmentData> equipmentData;
 }
 
 class EquipmentController
@@ -28,23 +23,26 @@ class EquipmentController
         {
             var equipmentData = CacheManager.Instance.GetAccountData(idAccount).equipments;
 
-            List<EquipmentResultPacket> equipmentResult = new List<EquipmentResultPacket>();
-
+            EquipmentResultPacket equipmentResult = new EquipmentResultPacket
+            {
+                cmd = "equipment_result",
+                equipmentData = new List<EquipmentData>()
+            };
             foreach (var equippedItem in equipmentData)
             {
-                equipmentResult.Add(new EquipmentResultPacket
+                equipmentResult.equipmentData.Add(new EquipmentData
                 {
-                    cmd = "equipment_result",
                     id = equippedItem.id,
                     idItem0_1 = equippedItem.idItem0_1,
+                    nameItem0_1 = equippedItem.nameItem0_1,
                     category = equippedItem.category,
+                    slotName = equippedItem.slotName,
                     item0_Attributes = equippedItem.item0_Attributes,
                     nameAttributes = equippedItem.nameAttributes
                 });
             }
 
-            string packet = JsonConvert.SerializeObject(equipmentResult);
-            await RaceManager.Instance.SendPacketToClient(client, packet);
+            await RaceManager.Instance.SendPacketToClient(client, equipmentResult);
         }
         catch (Exception ex)
         {
@@ -59,23 +57,26 @@ class EquipmentController
         {
             var equipmentData = CacheManager.Instance.GetAccountData(idAccount).equipments;
 
-            List<EquipmentResultPacket> equipmentResult = new List<EquipmentResultPacket>();
-
+            EquipmentResultPacket outfitSpritesResult = new EquipmentResultPacket
+            {
+                cmd = "outfitSprites_result",
+                equipmentData = new List<EquipmentData>()
+            };
             foreach (var equippedItem in equipmentData)
             {
-                equipmentResult.Add(new EquipmentResultPacket
+                outfitSpritesResult.equipmentData.Add(new EquipmentData
                 {
-                    cmd = "outfitSprites_result",
                     id = equippedItem.id,
                     idItem0_1 = equippedItem.idItem0_1,
+                    nameItem0_1 = equippedItem.nameItem0_1,
                     category = equippedItem.category,
+                    slotName = equippedItem.slotName,
                     item0_Attributes = equippedItem.item0_Attributes,
                     nameAttributes = equippedItem.nameAttributes
                 });
             }
 
-            string packet = JsonConvert.SerializeObject(equipmentResult);
-            await RaceManager.Instance.SendPacketToClient(client, packet);
+            await RaceManager.Instance.SendPacketToClient(client, outfitSpritesResult);
         }
         catch (Exception ex)
         {
