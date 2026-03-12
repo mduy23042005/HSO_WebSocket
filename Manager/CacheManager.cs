@@ -141,7 +141,7 @@ public class PlayerData
     public float lastPosY;
     public PlayerState state;
     public Direction direction;
-    public int frame;
+    public float stateStartTime;
     public string nameChar;
     public int level;
     public int idSchool;

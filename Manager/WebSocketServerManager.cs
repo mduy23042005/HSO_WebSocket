@@ -352,7 +352,7 @@ public class WebSocketServerManager
     }
     private async Task SyncMobsLoop()
     {
-        const int targetTickRate = 30;
+        const int targetTickRate = 20;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new System.Diagnostics.Stopwatch();
@@ -417,7 +417,7 @@ public class WebSocketServerManager
     }
     private async Task SyncOtherPlayersLoop()
     {
-        const int targetTickRate = 30;
+        const int targetTickRate = 20;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new System.Diagnostics.Stopwatch();
@@ -454,6 +454,7 @@ public class WebSocketServerManager
                     };
 
                     await RaceManager.Instance.SendPacketToAllClients(syncPlayerData);
+
                 }
             }
             catch (TaskCanceledException)
@@ -471,7 +472,7 @@ public class WebSocketServerManager
                 await Task.Delay(sleep, shutdownCts.Token);
         }
     }
-    
+
     private void ListenForQuit()
     {
         while (!shutdownCts.IsCancellationRequested)
