@@ -417,7 +417,7 @@ public class WebSocketServerManager
     }
     private async Task SyncOtherPlayersLoop()
     {
-        const int targetTickRate = 20;
+        const int targetTickRate = 70;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new System.Diagnostics.Stopwatch();
@@ -428,10 +428,10 @@ public class WebSocketServerManager
 
             try
             {
-                // Lấy snapshot player từ cache
-                var playerSnapshots = new List<PlayerData>();
+                var playerSnapshots = new List<OtherPlayerSyncData>();
 
                 var clients = RaceManager.Instance.GetAllClients();
+
                 foreach (var client in clients)
                 {
                     int idAccount = RaceManager.Instance.GetIDAccount(client);
@@ -439,22 +439,26 @@ public class WebSocketServerManager
                         continue;
 
                     var accountData = CacheManager.Instance.GetAccountData(idAccount);
-                    if (accountData?.playerStateData == null)
+                    if (accountData == null)
                         continue;
 
-                    playerSnapshots.Add(accountData.playerStateData);
+                    playerSnapshots.Add(new OtherPlayerSyncData
+                    {
+                        otherPlayerData = accountData.playerData,
+                        otherPlayerTransformData = accountData.playerTransformData,
+                        otherPlayerStateData = accountData.playerStateData
+                    });
                 }
 
                 if (playerSnapshots.Count > 0)
                 {
-                    var syncPlayerData = new
+                    var syncPacket = new
                     {
                         cmd = "syncOtherPlayers",
                         otherPlayersData = playerSnapshots
                     };
 
-                    await RaceManager.Instance.SendPacketToAllClients(syncPlayerData);
-
+                    await RaceManager.Instance.SendPacketToAllClients(syncPacket);
                 }
             }
             catch (TaskCanceledException)
@@ -463,11 +467,12 @@ public class WebSocketServerManager
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[SyncPlayer] Error: " + ex.Message);
+                Console.WriteLine("[SyncPlayers] Error: " + ex.Message);
             }
 
             stopwatch.Stop();
             int sleep = tickMS - (int)stopwatch.ElapsedMilliseconds;
+
             if (sleep > 0)
                 await Task.Delay(sleep, shutdownCts.Token);
         }
@@ -548,11 +553,13 @@ public class WebSocketServerManager
             {
                 case "syncPlayerData":
                     {
-                        var syncPacket = JsonConvert.DeserializeObject<SyncPlayerRequestPacket>(json);
-                        var accountData = CacheManager.Instance.GetAccountData(syncPacket.playerData.idAccount);
+                        var syncPacket = JsonConvert.DeserializeObject<PlayerSyncDataRequestPacket>(json);
+                        var accountData = CacheManager.Instance.GetAccountData(syncPacket.playerSyncData.playerData.idAccount);
                         if (accountData != null)
                         {
-                            accountData.playerStateData = syncPacket.playerData;
+                            accountData.playerData = syncPacket.playerSyncData.playerData;
+                            accountData.playerTransformData = syncPacket.playerSyncData.playerTransformData;
+                            accountData.playerStateData = syncPacket.playerSyncData.playerStateData;
                         }
                         break;
                     }

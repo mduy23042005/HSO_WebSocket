@@ -116,10 +116,10 @@ public class MobsController
 
         foreach (var kv in CacheManager.Instance.accounts)
         {
-            var playerData = kv.Value.playerStateData;
+            var playerData = kv.Value.playerTransformData;
             if (playerData == null) continue;
 
-            Vector2 playerPos = new Vector2(playerData.posX, playerData.posY);
+            Vector2 playerPos = new Vector2(playerData.positionData.x, playerData.positionData.y);
             float distSq = Vector2.DistanceSquared(position, playerPos);
 
             if (distSq <= visionRadius * visionRadius && distSq < minDistSq)
@@ -159,7 +159,7 @@ public class MobsController
             return;
         }
 
-        Vector2 playerPos = new Vector2(account.playerStateData.posX, account.playerStateData.posY);
+        Vector2 playerPos = new Vector2(account.playerTransformData.positionData.x, account.playerTransformData.positionData.y);
         Vector2 dir = playerPos - position;
         float distSq = dir.LengthSquared();
 

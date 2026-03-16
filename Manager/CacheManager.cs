@@ -132,16 +132,56 @@ public enum Direction
     Left = 2,
     Right = 3,
 }
+public class PositionData
+{
+    public float x;
+    public float y;
+    public float z;
+}
+public class RotationData
+{
+    public float x;
+    public float y;
+    public float z;
+}
+public class ScaleData
+{
+    public float x;
+    public float y;
+    public float z;
+}
+public class ColorData
+{
+    public float r;
+    public float g;
+    public float b;
+    public float a;
+}
+public class PartBodyData
+{
+    public string category;
+    public string label;
+    public PositionData positionData;
+    public RotationData rotationData;
+    public ScaleData scaleData;
+    public ColorData colorData;
+}
+public class PlayerStateData
+{
+    public int idAccount;
+    public PlayerState stateData;
+    public Direction directionData;
+    public List<PartBodyData> partBodyTransforms;
+}
+public class PlayerTransformData
+{
+    public int idAccount;
+    public PositionData positionData;
+    public ScaleData scaleData;
+}
 public class PlayerData
 {
     public int idAccount;
-    public float posX;
-    public float posY;
-    public float lastPosX;
-    public float lastPosY;
-    public PlayerState state;
-    public Direction direction;
-    public float stateStartTime;
     public string nameChar;
     public int level;
     public int idSchool;
@@ -163,6 +203,7 @@ public class PlayerData
     public int pet;
     public int skin;
 }
+
 public class AccountData
 {
     public Account account;
@@ -174,7 +215,9 @@ public class AccountData
     public List<InventoryItem4Data> inventoryItem4s;
     public Chest chest;
 
-    public PlayerData playerStateData;
+    public PlayerData playerData;
+    public PlayerStateData playerStateData;
+    public PlayerTransformData playerTransformData;
 }
 
 public class CacheManager
