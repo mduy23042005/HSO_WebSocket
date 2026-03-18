@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -30,6 +31,9 @@ public class LogOutRequestPacket
 
 public class LogInController
 {
+    private TimeZoneInfo vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+    private DateTime time;
+
     public async Task ClickLogIn(ClientConnection client, string username, string password)
     {
         LogInResultPacket loginResult;
@@ -51,7 +55,7 @@ public class LogInController
                     idSchool = 0,
                     nameChar = null,
                     hair = 0,
-                    message = "Account is already logged in another client."
+                    message = $"Tài khoản {acc.NameChar} đang online."
                 };
 
                 await RaceManager.Instance.SendPacketToClient(client, loginResult);
@@ -70,6 +74,8 @@ public class LogInController
             };
 
             await LoadAccountData(acc);
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Welcome back {loginResult.nameChar}.");
             RaceManager.Instance.BindAccountToClient(client, acc.IDAccount);
         }
         else

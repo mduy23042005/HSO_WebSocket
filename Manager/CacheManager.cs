@@ -168,14 +168,12 @@ public class PartBodyData
 }
 public class PlayerStateData
 {
-    public int idAccount;
     public PlayerState stateData;
     public Direction directionData;
     public List<PartBodyData> partBodyTransforms;
 }
 public class PlayerTransformData
 {
-    public int idAccount;
     public PositionData positionData;
     public ScaleData scaleData;
 }

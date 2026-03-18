@@ -17,6 +17,9 @@ public sealed class RaceManager
 
     private readonly object clientCollectionLock;
 
+    private TimeZoneInfo vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+    private DateTime time;
+
     public static RaceManager Instance => lazyInstance.Value;
     private RaceManager()
     {
@@ -203,9 +206,14 @@ public sealed class RaceManager
         if (client == null) return;
 
         int idAccount = GetIDAccount(client);
+        string nameAccount = CacheManager.Instance.accounts.TryGetValue(idAccount, out var value) ? value.account.NameChar : null;
+
         if (idAccount != 0)
         {
             CacheManager.Instance.RemoveAccountData(idAccount);
+
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Goodbye {nameAccount}.");
         }
 
         try
@@ -219,6 +227,9 @@ public sealed class RaceManager
 
         UnregisterClient(client);
         client.socket.Dispose();
+
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Closed socket: {client.ipRemote}.");
     }
 
     public List<ClientConnection> GetAllClients()
@@ -261,9 +272,14 @@ public sealed class RaceManager
         foreach (var client in needCleanup)
         {
             int idAccount = GetIDAccount(client);
+            string nameAccount = CacheManager.Instance.accounts.TryGetValue(idAccount, out var value) ? value.account.NameChar : null;
+
             if (idAccount != 0)
             {
                 CacheManager.Instance.RemoveAccountData(idAccount);
+
+                time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+                Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Goodbye {nameAccount}.");
             }
 
             if (client.socket.State == WebSocketState.Open || client.socket.State == WebSocketState.CloseReceived)
@@ -277,6 +293,9 @@ public sealed class RaceManager
 
             UnregisterClient(client);
             client.socket.Dispose();
+
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Closed socket: {client.ipRemote}.");
 
             lock (clientCollectionLock)
             {

@@ -56,16 +56,13 @@ class ReadAttributesController
                 attributesData = new EquipmentData()
             };
 
-            equipmentAttributesResult.attributesData = new EquipmentData
-            {
-                id = equipmentData.id,
-                idItem0_1 = equipmentData.idItem0_1,
-                nameItem0_1 = equipmentData.nameItem0_1,
-                category = equipmentData.category,
-                slotName = equipmentData.slotName,
-                item0_Attributes = equipmentData.item0_Attributes,
-                nameAttributes = equipmentData.nameAttributes
-            };
+            equipmentAttributesResult.attributesData.id = equipmentData.id;
+            equipmentAttributesResult.attributesData.idItem0_1 = equipmentData.idItem0_1;
+            equipmentAttributesResult.attributesData.nameItem0_1 = equipmentData.nameItem0_1;
+            equipmentAttributesResult.attributesData.category = equipmentData.category;
+            equipmentAttributesResult.attributesData.slotName = equipmentData.slotName;           
+            equipmentAttributesResult.attributesData.item0_Attributes = equipmentData.item0_Attributes;
+            equipmentAttributesResult.attributesData.nameAttributes = equipmentData.nameAttributes;
 
             await RaceManager.Instance.SendPacketToClient(client, equipmentAttributesResult);
         }
@@ -89,24 +86,21 @@ class ReadAttributesController
             {
                 cmd = "inventoryAttributes_result",
                 attributesItem0Data = new InventoryItem0Data(),
-                attributesItem1Data = new InventoryItem1Data(),
-                attributesItem2Data = new InventoryItem2Data(),
-                attributesItem3Data = new InventoryItem3Data(),
-                attributesItem4Data = new InventoryItem4Data(),
+                //attributesItem1Data = new InventoryItem1Data(),
+                //attributesItem2Data = new InventoryItem2Data(),
+                //attributesItem3Data = new InventoryItem3Data(),
+                //attributesItem4Data = new InventoryItem4Data(),
             };
 
-            inventoryAttributesResult.attributesItem0Data = new InventoryItem0Data
-            {
-                id = inventoryItem0Data.id,
-                idItem0 = inventoryItem0Data.idItem0,
-                nameItem0 = inventoryItem0Data.nameItem0,
-                typeItem0 = inventoryItem0Data.typeItem0,
-                category = inventoryItem0Data.category,
-                idSchool = inventoryItem0Data.idSchool,
-                level = inventoryItem0Data.level,
-                item0_Attributes = inventoryItem0Data.item0_Attributes,
-                nameAttributes = inventoryItem0Data.nameAttributes
-            };
+            inventoryAttributesResult.attributesItem0Data.id = inventoryItem0Data.id;
+            inventoryAttributesResult.attributesItem0Data.idItem0 = inventoryItem0Data.idItem0;
+            inventoryAttributesResult.attributesItem0Data.nameItem0 = inventoryItem0Data.nameItem0;
+            inventoryAttributesResult.attributesItem0Data.typeItem0 = inventoryItem0Data.typeItem0;
+            inventoryAttributesResult.attributesItem0Data.category = inventoryItem0Data.category;
+            inventoryAttributesResult.attributesItem0Data.idSchool = inventoryItem0Data.idSchool;
+            inventoryAttributesResult.attributesItem0Data.level = inventoryItem0Data.level;
+            inventoryAttributesResult.attributesItem0Data.item0_Attributes = inventoryItem0Data.item0_Attributes;
+            inventoryAttributesResult.attributesItem0Data.nameAttributes = inventoryItem0Data.nameAttributes;
 
             await RaceManager.Instance.SendPacketToClient(client, inventoryAttributesResult);
         }
@@ -129,7 +123,7 @@ class ReadAttributesController
             if (accountData == null) return;
 
             var inventoryItem0Data = accountData.inventoryItem0s.Find(x => x.id == id);
-            var equipmentData = accountData.equipments.Find(x => x.slotName == slotName);
+            var equipmentData = accountData.equipments.Find(x => x.id == id);
 
             var tempEquipmentItem = new EquipmentData
             {

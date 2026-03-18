@@ -280,6 +280,10 @@ public class WebSocketServerManager
                     var client = new ClientConnection(wsContext.WebSocket, IPClient);
 
                     RaceManager.Instance.RegisterClient(client);
+
+                    time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+                    Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Socket connected: {client.ipRemote}.");
+
                     _ = HandleClient(client);
                 }
                 else
