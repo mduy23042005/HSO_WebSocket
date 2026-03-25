@@ -3,27 +3,27 @@ using System.Threading.Tasks;
 
 public class ReadAttributesEquipmentRequestPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public int idAccount;
     public int id;
     public int idItem0_1;
 }
 public class ReadAttributesEquipmentResultPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public EquipmentData attributesData;
 }
 
 public class ReadAttributesInventoryRequestPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public int idAccount;
     public int id;
     public int idItem0;
 }
 public class ReadAttributesInventoryResultPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public InventoryItem0Data attributesItem0Data;
     public InventoryItem1Data attributesItem1Data;
     public InventoryItem2Data attributesItem2Data;
@@ -33,38 +33,57 @@ public class ReadAttributesInventoryResultPacket
 
 public class EquipItem0RequestPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public int idAccount;
     public int id;
     public int idItem0;
     public string slotName;
 }
 
-class ReadAttributesController
+public class ReadAttributesController
 {
-    public async Task ReadAttributesEquipment(ClientConnection client, int idAcc, int id)
+    public async Task ReadAttributesEquipment(ClientConnection client, ReadAttributesEquipmentRequestPacket readAttributesPacket)
     {
-        int idAccount = idAcc;
+        int idAccount = readAttributesPacket.idAccount;
 
         try
         {
-            var equipmentData = CacheManager.Instance.GetAccountData(idAccount).equipments.Find(x => x.id == id);
+            var equipmentData = CacheManager.Instance.GetAccountData(idAccount).equipments.Find(x => x.id == readAttributesPacket.id);
 
             ReadAttributesEquipmentResultPacket equipmentAttributesResult = new ReadAttributesEquipmentResultPacket
             {
-                cmd = "equipmentAttributes_result",
-                attributesData = new EquipmentData()
+                cmd = EnumCmdCode.equipmentAttributes,
+                attributesData = new EquipmentData
+                {
+                    id = equipmentData.id,
+                    idItem0_1 = equipmentData.idItem0_1,
+                    nameItem0_1 = equipmentData.nameItem0_1,
+                    category = equipmentData.category,
+                    slotName = equipmentData.slotName,
+                    item0_Attributes = equipmentData.item0_Attributes,
+                    nameAttributes = equipmentData.nameAttributes,
+                }
             };
 
-            equipmentAttributesResult.attributesData.id = equipmentData.id;
-            equipmentAttributesResult.attributesData.idItem0_1 = equipmentData.idItem0_1;
-            equipmentAttributesResult.attributesData.nameItem0_1 = equipmentData.nameItem0_1;
-            equipmentAttributesResult.attributesData.category = equipmentData.category;
-            equipmentAttributesResult.attributesData.slotName = equipmentData.slotName;           
-            equipmentAttributesResult.attributesData.item0_Attributes = equipmentData.item0_Attributes;
-            equipmentAttributesResult.attributesData.nameAttributes = equipmentData.nameAttributes;
+            PacketWriterManager writer = new PacketWriterManager();
+            writer.WriteInt((int)equipmentAttributesResult.cmd);
+            writer.WriteInt(equipmentAttributesResult.attributesData.id);
+            writer.WriteInt(equipmentAttributesResult.attributesData.idItem0_1);
+            writer.WriteString(equipmentAttributesResult.attributesData.nameItem0_1);
+            writer.WriteInt(equipmentAttributesResult.attributesData.category);
+            writer.WriteString(equipmentAttributesResult.attributesData.slotName);
+            writer.WriteListCount(equipmentAttributesResult.attributesData.item0_Attributes.Count);
+            for (int i = 0; i < equipmentAttributesResult.attributesData.item0_Attributes.Count; i++)
+            {
+                writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].ID);
+                writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].IDItem0);
+                writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].IDAttribute);
+                writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].Value);
+                writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].Category);
+                writer.WriteString(equipmentAttributesResult.attributesData.nameAttributes[i].NameAttribute);
+            }
 
-            await RaceManager.Instance.SendPacketToClient(client, equipmentAttributesResult);
+            await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
         }
         catch (Exception ex)
         {
@@ -72,37 +91,59 @@ class ReadAttributesController
         }
     }
 
-    public async Task ReadAttributesInventory(ClientConnection client, int idAcc, int id) //sau này sẽ có truyền thêm loại item (0, 1, 2, 3, 4) vào để phân biệt
+    //sau này sẽ có truyền thêm loại item (0, 1, 2, 3, 4) vào để phân biệt
+    public async Task ReadAttributesInventory(ClientConnection client, ReadAttributesInventoryRequestPacket readAttributesPacket) 
     {
-        int idAccount = idAcc;
+        int idAccount = readAttributesPacket.idAccount;
 
         try
         {
-            var inventoryItem0Data = CacheManager.Instance.GetAccountData(idAccount).inventoryItem0s.Find(x => x.id == id);
+            var inventoryItem0Data = CacheManager.Instance.GetAccountData(idAccount).inventoryItem0s.Find(x => x.id == readAttributesPacket.id);
 
-            ReadAttributesInventoryResultPacket inventoryAttributesResult = new ReadAttributesInventoryResultPacket();
+            ReadAttributesInventoryResultPacket inventoryItem0AttributesResult = new ReadAttributesInventoryResultPacket();
 
-            inventoryAttributesResult = new ReadAttributesInventoryResultPacket
+            inventoryItem0AttributesResult = new ReadAttributesInventoryResultPacket
             {
-                cmd = "inventoryAttributes_result",
-                attributesItem0Data = new InventoryItem0Data(),
+                cmd = EnumCmdCode.inventoryAttributes,
+                attributesItem0Data = new InventoryItem0Data
+                {
+                    id = inventoryItem0Data.id,
+                    idItem0 = inventoryItem0Data.idItem0,
+                    nameItem0 = inventoryItem0Data.nameItem0,
+                    typeItem0 = inventoryItem0Data.typeItem0,
+                    category = inventoryItem0Data.category,
+                    idSchool = inventoryItem0Data.idSchool,
+                    level = inventoryItem0Data.level,
+                    item0_Attributes = inventoryItem0Data.item0_Attributes,
+                    nameAttributes = inventoryItem0Data.nameAttributes,
+                },
                 //attributesItem1Data = new InventoryItem1Data(),
                 //attributesItem2Data = new InventoryItem2Data(),
                 //attributesItem3Data = new InventoryItem3Data(),
                 //attributesItem4Data = new InventoryItem4Data(),
             };
 
-            inventoryAttributesResult.attributesItem0Data.id = inventoryItem0Data.id;
-            inventoryAttributesResult.attributesItem0Data.idItem0 = inventoryItem0Data.idItem0;
-            inventoryAttributesResult.attributesItem0Data.nameItem0 = inventoryItem0Data.nameItem0;
-            inventoryAttributesResult.attributesItem0Data.typeItem0 = inventoryItem0Data.typeItem0;
-            inventoryAttributesResult.attributesItem0Data.category = inventoryItem0Data.category;
-            inventoryAttributesResult.attributesItem0Data.idSchool = inventoryItem0Data.idSchool;
-            inventoryAttributesResult.attributesItem0Data.level = inventoryItem0Data.level;
-            inventoryAttributesResult.attributesItem0Data.item0_Attributes = inventoryItem0Data.item0_Attributes;
-            inventoryAttributesResult.attributesItem0Data.nameAttributes = inventoryItem0Data.nameAttributes;
+            PacketWriterManager writer = new PacketWriterManager();
+            writer.WriteInt((int)inventoryItem0AttributesResult.cmd);
+            writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.id);
+            writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.idItem0);
+            writer.WriteString(inventoryItem0AttributesResult.attributesItem0Data.nameItem0);
+            writer.WriteString(inventoryItem0AttributesResult.attributesItem0Data.typeItem0);
+            writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.category);
+            writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.idSchool);
+            writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.level);
+            writer.WriteListCount(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes.Count);
+            for (int i = 0; i < inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes.Count; i++)
+            {
+                writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].ID);
+                writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].IDItem0);
+                writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].IDAttribute);
+                writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].Value);
+                writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].Category);
+                writer.WriteString(inventoryItem0AttributesResult.attributesItem0Data.nameAttributes[i].NameAttribute);
+            }
 
-            await RaceManager.Instance.SendPacketToClient(client, inventoryAttributesResult);
+            await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
         }
         catch (Exception ex)
         {
@@ -110,9 +151,9 @@ class ReadAttributesController
         }
     }
 
-    public async Task EquipItem0(ClientConnection client, int idAcc, int id, int idItem0, string slotName)
+    public async Task EquipItem0(ClientConnection client, EquipItem0RequestPacket equipItem0Packet)
     {
-        int idAccount = idAcc;
+        int idAccount = equipItem0Packet.idAccount;
 
         InventoryController inventoryController = new InventoryController();
         EquipmentController equipmentController = new EquipmentController();
@@ -122,8 +163,8 @@ class ReadAttributesController
             var accountData = CacheManager.Instance.GetAccountData(idAccount);
             if (accountData == null) return;
 
-            var inventoryItem0Data = accountData.inventoryItem0s.Find(x => x.id == id);
-            var equipmentData = accountData.equipments.Find(x => x.id == id);
+            var inventoryItem0Data = accountData.inventoryItem0s.Find(x => x.id == equipItem0Packet.id);
+            var equipmentData = accountData.equipments.Find(x => x.slotName == equipItem0Packet.slotName);
 
             var tempEquipmentItem = new EquipmentData
             {
@@ -149,7 +190,7 @@ class ReadAttributesController
             await equipmentController.ReadCacheEquipment(client);
             await inventoryController.ReadCacheInventory(client);
 
-            await WebAPIManager.Instance.PostAsync($"api/account/{idAccount}/equipItem0/{id}?idAccount={idAccount}&id={id}&slotName={slotName}");
+            await WebAPIManager.Instance.PostAsync($"api/account/{idAccount}/equipItem0/{equipItem0Packet.id}?idAccount={idAccount}&id={equipItem0Packet.id}&slotName={equipItem0Packet.slotName}");
         }
         catch (Exception ex)
         {

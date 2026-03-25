@@ -1,11 +1,9 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.WebSockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -72,7 +70,7 @@ public class WebSocketServerManager
 
             _ = SyncOtherPlayersLoop();
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} SyncOtherPlayers loop started.");
-
+            
             Task.Run(ListenForQuit);
 
             //Chấp nhận kết nối từ client
@@ -306,7 +304,7 @@ public class WebSocketServerManager
     private async Task HandleClient(ClientConnection client)
     {
         var buffer = new byte[4096];
-        var messageBuffer = new StringBuilder();
+        var messageBuffer = new List<byte>();
 
         try
         {
@@ -317,22 +315,18 @@ public class WebSocketServerManager
                 do
                 {
                     if (client.socket.State != WebSocketState.Open)
-                    {
                         return;
-                    }
 
                     result = await client.socket.ReceiveAsync(new ArraySegment<byte>(buffer), shutdownCts.Token);
 
                     if (result.MessageType == WebSocketMessageType.Close)
-                    {
                         return;
-                    }
 
-                    messageBuffer.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+                    messageBuffer.AddRange(new ArraySegment<byte>(buffer, 0, result.Count));
 
                 } while (!result.EndOfMessage);
 
-                string fullMessage = messageBuffer.ToString();
+                byte[] fullMessage = messageBuffer.ToArray();
                 messageBuffer.Clear();
 
                 await ReceivePacketFromClient(client, fullMessage);
@@ -377,11 +371,11 @@ public class WebSocketServerManager
                 }
 
                 // Build sync packet
-                var mobSnapshots = new List<object>();
+                var mobSnapshots = new List<SyncMobsResultData>();
                 foreach (var mob in mobs)
                 {
                     var pos = mob.mobsAI.GetPosition();
-                    mobSnapshots.Add(new
+                    mobSnapshots.Add(new SyncMobsResultData
                     {
                         id = mob.id,
                         idMob = mob.mob.IDMob,
@@ -397,11 +391,25 @@ public class WebSocketServerManager
                 {
                     var syncMobData = new
                     {
-                        cmd = "syncMobs",
+                        cmd = EnumCmdCode.syncMobData,
                         mobsData = mobSnapshots
                     };
 
-                    await RaceManager.Instance.SendPacketToAllClients(syncMobData);
+                    PacketWriterManager writer = new PacketWriterManager();
+                    writer.WriteInt((int)syncMobData.cmd);
+                    writer.WriteListCount(syncMobData.mobsData.Count);
+                    foreach (var mobData in syncMobData.mobsData)
+                    {
+                        writer.WriteInt(mobData.id);
+                        writer.WriteInt(mobData.idMob);
+                        writer.WriteFloat(mobData.posX);
+                        writer.WriteFloat(mobData.posY);
+                        writer.WriteString(mobData.state);
+                        writer.WriteInt(mobData.idState);
+                        writer.WriteInt(mobData.direction);
+                    }
+
+                    await RaceManager.Instance.SendPacketToAllClients(writer.ToArray());
                 }
             }
             catch (TaskCanceledException)
@@ -443,7 +451,8 @@ public class WebSocketServerManager
                         continue;
 
                     var accountData = CacheManager.Instance.GetAccountData(idAccount);
-                    if (accountData == null)
+
+                    if (accountData == null || accountData.playerData == null || accountData.playerTransformData == null || accountData.playerStateData == null)
                         continue;
 
                     playerSnapshots.Add(new OtherPlayerSyncData
@@ -458,11 +467,68 @@ public class WebSocketServerManager
                 {
                     var syncPacket = new
                     {
-                        cmd = "syncOtherPlayers",
+                        cmd = EnumCmdCode.syncPlayerData,
                         otherPlayersData = playerSnapshots
                     };
 
-                    await RaceManager.Instance.SendPacketToAllClients(syncPacket);
+                    PacketWriterManager writer = new PacketWriterManager();
+                    writer.WriteInt((int)syncPacket.cmd);
+                    writer.WriteListCount(syncPacket.otherPlayersData.Count);
+                    foreach (var otherPlayer in syncPacket.otherPlayersData)
+                    {
+                        writer.WriteInt(otherPlayer.otherPlayerData.idAccount);
+                        writer.WriteString(otherPlayer.otherPlayerData.nameChar);
+                        writer.WriteInt(otherPlayer.otherPlayerData.level);
+                        writer.WriteInt(otherPlayer.otherPlayerData.idSchool);
+                        writer.WriteInt(otherPlayer.otherPlayerData.hair);
+                        writer.WriteInt(otherPlayer.otherPlayerData.weapon);
+                        writer.WriteInt(otherPlayer.otherPlayerData.helmet);
+                        writer.WriteInt(otherPlayer.otherPlayerData.armor);
+                        writer.WriteInt(otherPlayer.otherPlayerData.legArmor);
+                        writer.WriteInt(otherPlayer.otherPlayerData.gloves);
+                        writer.WriteInt(otherPlayer.otherPlayerData.shoes);
+                        writer.WriteInt(otherPlayer.otherPlayerData.ring1);
+                        writer.WriteInt(otherPlayer.otherPlayerData.ring2);
+                        writer.WriteInt(otherPlayer.otherPlayerData.necklace);
+                        writer.WriteInt(otherPlayer.otherPlayerData.medal);
+                        writer.WriteInt(otherPlayer.otherPlayerData.cloak);
+                        writer.WriteInt(otherPlayer.otherPlayerData.wing);
+                        writer.WriteInt(otherPlayer.otherPlayerData.skinWing);
+                        writer.WriteInt(otherPlayer.otherPlayerData.mounts);
+                        writer.WriteInt(otherPlayer.otherPlayerData.pet);
+                        writer.WriteInt(otherPlayer.otherPlayerData.skin);
+
+                        writer.WriteFloat(otherPlayer.otherPlayerTransformData.positionData.x);
+                        writer.WriteFloat(otherPlayer.otherPlayerTransformData.positionData.y);
+                        writer.WriteFloat(otherPlayer.otherPlayerTransformData.positionData.z);
+                        writer.WriteFloat(otherPlayer.otherPlayerTransformData.scaleData.x);
+                        writer.WriteFloat(otherPlayer.otherPlayerTransformData.scaleData.y);
+                        writer.WriteFloat(otherPlayer.otherPlayerTransformData.scaleData.z);
+
+                        writer.WriteInt((int)otherPlayer.otherPlayerStateData.stateData);
+                        writer.WriteInt((int)otherPlayer.otherPlayerStateData.directionData);
+                        writer.WriteListCount(otherPlayer.otherPlayerStateData.partBodyTransforms.Count);
+                        foreach (var partBodyData in otherPlayer.otherPlayerStateData.partBodyTransforms)
+                        {
+                            writer.WriteString(partBodyData.category);
+                            writer.WriteString(partBodyData.label);
+                            writer.WriteFloat(partBodyData.positionData.x);
+                            writer.WriteFloat(partBodyData.positionData.y);
+                            writer.WriteFloat(partBodyData.positionData.z);
+                            writer.WriteFloat(partBodyData.rotationData.x);
+                            writer.WriteFloat(partBodyData.rotationData.y);
+                            writer.WriteFloat(partBodyData.rotationData.z);
+                            writer.WriteFloat(partBodyData.scaleData.x);
+                            writer.WriteFloat(partBodyData.scaleData.y);
+                            writer.WriteFloat(partBodyData.scaleData.z);
+                            writer.WriteFloat(partBodyData.colorData.r);
+                            writer.WriteFloat(partBodyData.colorData.g);
+                            writer.WriteFloat(partBodyData.colorData.b);
+                            writer.WriteFloat(partBodyData.colorData.a);
+                        }
+                    }
+
+                    await RaceManager.Instance.SendPacketToAllClients(writer.ToArray());
                 }
             }
             catch (TaskCanceledException)
@@ -533,90 +599,179 @@ public class WebSocketServerManager
         Environment.Exit(0);
     }
 
-    private async Task ReceivePacketFromClient(ClientConnection client, string json)
+    private async Task ReceivePacketFromClient(ClientConnection client, byte[] data)
     {
         try
         {
-            var token = JToken.Parse(json);
-            string cmd = null;
-            switch (token.Type)
-            {
-                case JTokenType.Object:
-                    cmd = token["cmd"]?.ToString();
-                    break;
+            PacketReaderManager reader = new PacketReaderManager(data);
+            EnumCmdCode cmd = (EnumCmdCode)reader.ReadInt();
 
-                case JTokenType.Array:
-                    foreach (var item in token)
-                    {
-                        //Đệ quy để cho từng phần tử của JTokenType.Array quay ngược lại case JTokenType.Object
-                        await ReceivePacketFromClient(client, item.ToString(Formatting.None)); 
-                    }
-                    break;
-            }
             switch (cmd)
             {
-                case "syncPlayerData":
+                case EnumCmdCode.syncPlayerData:
+                    var playerData = new PlayerData
                     {
-                        var syncPacket = JsonConvert.DeserializeObject<PlayerSyncDataRequestPacket>(json);
-                        var accountData = CacheManager.Instance.GetAccountData(syncPacket.playerSyncData.playerData.idAccount);
-                        if (accountData != null)
+                        idAccount = reader.ReadInt(),
+                        nameChar = reader.ReadString(),
+                        level = reader.ReadInt(),
+                        idSchool = reader.ReadInt(),
+                        hair = reader.ReadInt(),
+                        weapon = reader.ReadInt(),
+                        helmet = reader.ReadInt(),
+                        armor = reader.ReadInt(),
+                        legArmor = reader.ReadInt(),
+                        gloves = reader.ReadInt(),
+                        shoes = reader.ReadInt(),
+                        ring1 = reader.ReadInt(),
+                        ring2 = reader.ReadInt(),
+                        necklace = reader.ReadInt(),
+                        medal = reader.ReadInt(),
+                        cloak = reader.ReadInt(),
+                        wing = reader.ReadInt(),
+                        skinWing = reader.ReadInt(),
+                        mounts = reader.ReadInt(),
+                        pet = reader.ReadInt(),
+                        skin = reader.ReadInt(),
+                    };
+
+
+                    var playerTransformData = new PlayerTransformData 
+                    { 
+                        positionData = new PositionData
                         {
-                            accountData.playerData = syncPacket.playerSyncData.playerData;
-                            accountData.playerTransformData = syncPacket.playerSyncData.playerTransformData;
-                            accountData.playerStateData = syncPacket.playerSyncData.playerStateData;
+                            x = reader.ReadFloat(),
+                            y = reader.ReadFloat(),
+                            z = reader.ReadFloat()
+                        },
+                        scaleData = new ScaleData
+                        {
+                            x = reader.ReadFloat(),
+                            y = reader.ReadFloat(),
+                            z = reader.ReadFloat()
                         }
-                        break;
+                    };
+                        
+                    var playerStateData = new PlayerStateData();
+                    playerStateData.stateData = (PlayerState)reader.ReadInt();
+                    playerStateData.directionData = (Direction)reader.ReadInt();
+                    playerStateData.partBodyTransforms = new List<PartBodyData>();
+                    int countPartBodyTransform = reader.ReadInt();
+                    for (int i = 0; i < countPartBodyTransform; i++)
+                    {
+                        playerStateData.partBodyTransforms.Add(new PartBodyData
+                        {
+                            category = reader.ReadString(),
+                            label = reader.ReadString(),
+                            positionData = new PositionData
+                            {
+                                x = reader.ReadFloat(),
+                                y = reader.ReadFloat(),
+                                z = reader.ReadFloat()
+                            },
+                            rotationData = new RotationData
+                            {
+                                x = reader.ReadFloat(),
+                                y = reader.ReadFloat(),
+                                z = reader.ReadFloat()
+                            },
+                            scaleData = new ScaleData
+                            {
+                                x = reader.ReadFloat(),
+                                y = reader.ReadFloat(),
+                                z = reader.ReadFloat()
+                            },
+                            colorData = new ColorData
+                            {
+                                r = reader.ReadFloat(),
+                                g = reader.ReadFloat(),
+                                b = reader.ReadFloat(),
+                                a = reader.ReadFloat()
+                            },
+                        });
                     }
 
-                case "login":
-                    var loginPacket = JsonConvert.DeserializeObject<LogInRequestPacket>(json);
-                    var loginController = new LogInController();
-                    await loginController.ClickLogIn(client, loginPacket.username, loginPacket.password);
+                    var accountData = CacheManager.Instance.GetAccountData(playerData.idAccount);
+                    if (accountData != null)
+                    {
+                        accountData.playerData = playerData;
+                        accountData.playerTransformData = playerTransformData;
+                        accountData.playerStateData = playerStateData;
+                    }
                     break;
-                case "logout":
-                    var logoutPacket = JsonConvert.DeserializeObject<LogOutRequestPacket>(json);
-                    await RaceManager.Instance.SendPacketToClient(client, logoutPacket);
+
+                case EnumCmdCode.syncAtkData:
+
+                    break;
+
+                case EnumCmdCode.login:
+                    var loginPacket = new LogInRequestPacket();
+                    loginPacket.username = reader.ReadString();
+                    loginPacket.password = reader.ReadString();
+
+                    var loginController = new LogInController();
+                    await loginController.ClickLogIn(client, loginPacket);
+                    break;
+
+                case EnumCmdCode.logout:
+                    await RaceManager.Instance.SendPacketToClient(client, data);
                     RaceManager.Instance.ForceLogout(client);
                     return;
 
-                case "register":
-                    var registerPacket = JsonConvert.DeserializeObject<RegisterRequestPacket>(json);
+                case EnumCmdCode.register:
+                    var registerPacket = new RegisterRequestPacket();
+                    registerPacket.idSchool = reader.ReadInt();
+                    registerPacket.nameChar = reader.ReadString();
+                    registerPacket.username = reader.ReadString();
+                    registerPacket.password = reader.ReadString();
+                    registerPacket.hair = reader.ReadInt();
+                    registerPacket.blessingPoints = reader.ReadInt();
+
                     var registerController = new RegisterController();
-                    await registerController.ClickRegister(client, registerPacket.idSchool, registerPacket.username, registerPacket.password, registerPacket.nameChar, registerPacket.hair, registerPacket.blessingPoints);
+                    await registerController.ClickRegister(client, registerPacket);
                     break;
 
-                case "equipment":
-                    var equipmentPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
+                case EnumCmdCode.equipment:
                     var equipmentController = new EquipmentController();
                     await equipmentController.ReadCacheEquipment(client);
                     break;
 
-                case "equipmentAttributes":
-                    var equipmentAttributesRequestPacket = JsonConvert.DeserializeObject<ReadAttributesEquipmentRequestPacket>(json);
+                case EnumCmdCode.equipmentAttributes:
+                    var equipmentAttributesRequestPacket = new ReadAttributesEquipmentRequestPacket();
+                    equipmentAttributesRequestPacket.idAccount = reader.ReadInt();
+                    equipmentAttributesRequestPacket.id = reader.ReadInt();
+                    equipmentAttributesRequestPacket.idItem0_1 = reader.ReadInt();
+
                     var readAttributesEquipmentController = new ReadAttributesController();
-                    await readAttributesEquipmentController.ReadAttributesEquipment(client, equipmentAttributesRequestPacket.idAccount, equipmentAttributesRequestPacket.id);
+                    await readAttributesEquipmentController.ReadAttributesEquipment(client, equipmentAttributesRequestPacket);
                     break;
 
-                case "inventory":
-                    var inventoryPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
+                case EnumCmdCode.inventory:
                     var inventoryController = new InventoryController();
                     await inventoryController.ReadCacheInventory(client);
                     break;
 
-                case "inventoryAttributes":
-                    var inventoryAttributesRequestPacket = JsonConvert.DeserializeObject<ReadAttributesInventoryRequestPacket>(json);
+                case EnumCmdCode.inventoryAttributes:
+                    var inventoryAttributesRequestPacket = new ReadAttributesInventoryRequestPacket();
+                    inventoryAttributesRequestPacket.idAccount = reader.ReadInt();
+                    inventoryAttributesRequestPacket.id = reader.ReadInt();
+                    inventoryAttributesRequestPacket.idItem0 = reader.ReadInt();
+
                     var readAttributesInventoryController = new ReadAttributesController();
-                    await readAttributesInventoryController.ReadAttributesInventory(client, inventoryAttributesRequestPacket.idAccount, inventoryAttributesRequestPacket.id);
+                    await readAttributesInventoryController.ReadAttributesInventory(client, inventoryAttributesRequestPacket);
                     break;
 
-                case "equipItem0":
-                    var equipItem0RequestPacket = JsonConvert.DeserializeObject<EquipItem0RequestPacket>(json);
+                case EnumCmdCode.equipItem0:
+                    var equipItem0RequestPacket = new EquipItem0RequestPacket();
+                    equipItem0RequestPacket.idAccount = reader.ReadInt();
+                    equipItem0RequestPacket.id = reader.ReadInt();
+                    equipItem0RequestPacket.idItem0 = reader.ReadInt();
+                    equipItem0RequestPacket.slotName = reader.ReadString();
+
                     var equipItem0Controller = new ReadAttributesController();
-                    await equipItem0Controller.EquipItem0(client, equipItem0RequestPacket.idAccount, equipItem0RequestPacket.id, equipItem0RequestPacket.idItem0, equipItem0RequestPacket.slotName);
+                    await equipItem0Controller.EquipItem0(client, equipItem0RequestPacket);
                     break;
 
-                case "outfitSprites":
-                    var outfitSpritesPacket = JsonConvert.DeserializeObject<EquipmentRequestPacket>(json);
+                case EnumCmdCode.outfitSprites:
                     var outfitSpritesController = new EquipmentController();
                     await outfitSpritesController.ReadCacheOutfitSprites(client);
                     break;

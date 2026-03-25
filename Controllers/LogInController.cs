@@ -5,27 +5,28 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 //class hứng dữ liệu từ client gửi lên
-class LogInRequestPacket
+public class LogInRequestPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public string username;
     public string password;
 }
 //class trả dữ liệu về client
-class LogInResultPacket
+public class LogInResultPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public bool success;
     public int idAccount;
     public int idSchool;
     public string nameChar;
     public int hair;
+    public int level;
     public string message;
 }
 
 public class LogOutRequestPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public int idAccount;
 }
 
@@ -34,11 +35,11 @@ public class LogInController
     private TimeZoneInfo vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
     private DateTime time;
 
-    public async Task ClickLogIn(ClientConnection client, string username, string password)
+    public async Task ClickLogIn(ClientConnection client, LogInRequestPacket loginPacket)
     {
         LogInResultPacket loginResult;
 
-        string urlAccount = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/login?username={username}&password={password}";
+        string urlAccount = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/login?username={loginPacket.username}&password={loginPacket.password}";
         HttpResponseMessage res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlAccount);
         string json = await res.Content.ReadAsStringAsync();
         var acc = JsonConvert.DeserializeObject<Account>(json);
@@ -49,51 +50,63 @@ public class LogInController
             {
                 loginResult = new LogInResultPacket
                 {
-                    cmd = "login_result",
+                    cmd = EnumCmdCode.login,
                     success = false,
                     idAccount = 0,
                     idSchool = 0,
                     nameChar = null,
                     hair = 0,
+                    level = 0,
                     message = $"Tài khoản {acc.NameChar} đang online."
                 };
-
-                await RaceManager.Instance.SendPacketToClient(client, loginResult);
-                return;
             }
-
-            loginResult = new LogInResultPacket
+            else
             {
-                cmd = "login_result",
-                success = acc != null,
-                idAccount = acc.IDAccount,
-                idSchool = acc.IDSchool,
-                nameChar = acc.NameChar,
-                hair = acc.Hair,
-                message = $"Đăng nhập {acc.NameChar} thành công."
-            };
+                loginResult = new LogInResultPacket
+                {
+                    cmd = EnumCmdCode.login,
+                    success = acc != null,
+                    idAccount = acc.IDAccount,
+                    idSchool = acc.IDSchool,
+                    nameChar = acc.NameChar,
+                    hair = acc.Hair,
+                    level = acc.Level,
+                    message = $"Đăng nhập {acc.NameChar} thành công."
+                };
 
-            await LoadAccountData(acc);
-            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
-            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Welcome back {loginResult.nameChar}.");
-            RaceManager.Instance.BindAccountToClient(client, acc.IDAccount);
+                await LoadAccountData(acc);
+                time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+                Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Welcome back {loginResult.nameChar}.");
+                RaceManager.Instance.BindAccountToClient(client, acc.IDAccount);
+            }
         }
         else
         {
             loginResult = new LogInResultPacket
             {
-                cmd = "login_result",
+                cmd = EnumCmdCode.login,
                 success = false,
                 idAccount = 0,
                 idSchool = 0,
                 nameChar = null,
                 hair = 0,
+                level = 0,
                 message = "Username hoặc Password không đúng."
             };
             return;
         }
 
-        await RaceManager.Instance.SendPacketToClient(client, loginResult);
+        PacketWriterManager writer = new PacketWriterManager();
+        writer.WriteInt((int)loginResult.cmd);
+        writer.WriteBool(loginResult.success);
+        writer.WriteInt(loginResult.idAccount);
+        writer.WriteInt(loginResult.idSchool);
+        writer.WriteString(loginResult.nameChar);
+        writer.WriteInt(loginResult.hair);
+        writer.WriteInt(loginResult.level);
+        writer.WriteString(loginResult.message);
+
+        await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
     }
     private async Task LoadAccountData(Account acc)
     {

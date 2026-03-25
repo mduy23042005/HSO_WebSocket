@@ -4,12 +4,12 @@ using System.Threading.Tasks;
 
 public class InventoryRequestPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public int idAccount;
 }
 public class InventoryResultPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public List<InventoryItem0Data> inventoryItem0Data;
     public List<InventoryItem1Data> inventoryItem1Data;
     public List<InventoryItem2Data> inventoryItem2Data;
@@ -29,7 +29,7 @@ class InventoryController
 
             InventoryResultPacket inventoryResult = new InventoryResultPacket
             { 
-                cmd = "inventory_result",
+                cmd = EnumCmdCode.inventory,
                 inventoryItem0Data = new List<InventoryItem0Data>(),
                 inventoryItem1Data = new List<InventoryItem1Data>(),
                 inventoryItem2Data = new List<InventoryItem2Data>(),
@@ -47,12 +47,23 @@ class InventoryController
                     typeItem0 = inventoryItem0.typeItem0,
                     category = inventoryItem0.category,
                     idSchool = inventoryItem0.idSchool,
-                    item0_Attributes = inventoryItem0.item0_Attributes,
-                    nameAttributes = inventoryItem0.nameAttributes
                 });
             }
 
-            await RaceManager.Instance.SendPacketToClient(client, inventoryResult);
+            PacketWriterManager writer = new PacketWriterManager();
+            writer.WriteInt((int)inventoryResult.cmd);
+            writer.WriteListCount(inventoryResult.inventoryItem0Data.Count);
+            foreach (var inventoryItem0 in inventoryItem0Data)
+            {
+                writer.WriteInt(inventoryItem0.id);
+                writer.WriteInt(inventoryItem0.idItem0);
+                writer.WriteString(inventoryItem0.nameItem0);
+                writer.WriteString(inventoryItem0.typeItem0);
+                writer.WriteInt(inventoryItem0.category);
+                writer.WriteInt(inventoryItem0.idSchool);
+            }
+
+            await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
         }
         catch (Exception ex)
         {

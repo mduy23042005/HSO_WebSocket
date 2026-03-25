@@ -91,7 +91,7 @@ public sealed class RaceManager
         }
     }
 
-    public async Task SendPacketToAllClients<T>(T data, ClientConnection excludedClient = null)
+    public async Task SendPacketToAllClients(byte[] data, ClientConnection excludedClient = null)
     {
         if (data == null)
             return;
@@ -112,7 +112,7 @@ public sealed class RaceManager
 
         await Task.WhenAll(tasks);
     }
-    public async Task SendPacketToClient<T>(ClientConnection targetClient, T data)
+    public async Task SendPacketToClient(ClientConnection targetClient, byte[] data)
     {
         if (targetClient == null)
             return;
@@ -137,12 +137,11 @@ public sealed class RaceManager
             if (targetClient.socket.State != WebSocketState.Open)
                 return;
 
-            string packet = JsonConvert.SerializeObject(data);
-            byte[] packetBytes = Encoding.UTF8.GetBytes(packet);
+            byte[] packetBytes = data;
 
             if (targetClient.socket.State == WebSocketState.Open)
             {
-                await targetClient.socket.SendAsync(new ArraySegment<byte>(packetBytes), WebSocketMessageType.Text, true, CancellationToken.None);
+                await targetClient.socket.SendAsync(new ArraySegment<byte>(packetBytes), WebSocketMessageType.Binary, true, CancellationToken.None);
             }
         }
         catch (ObjectDisposedException)

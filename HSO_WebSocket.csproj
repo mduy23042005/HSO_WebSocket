@@ -55,6 +55,9 @@
     <Compile Include="Controllers\RegisterController.cs" />
     <Compile Include="Controllers\PlayerController.cs" />
     <Compile Include="Manager\CacheManager.cs" />
+    <Compile Include="Manager\CmdCodeManager.cs" />
+    <Compile Include="Manager\PacketReaderManager.cs" />
+    <Compile Include="Manager\PacketWriterManager.cs" />
     <Compile Include="Manager\RaceManager.cs" />
     <Compile Include="Manager\WebAPIManager.cs" />
     <Compile Include="Models\Account.cs" />
@@ -91,6 +94,8 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="BinaryBuffer\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

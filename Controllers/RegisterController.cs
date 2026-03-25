@@ -6,7 +6,7 @@ using System.Net.Http;
 
 public class RegisterRequestPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public int idSchool;
     public string nameChar;
     public string username;
@@ -16,16 +16,16 @@ public class RegisterRequestPacket
 }
 public class RegisterResultPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public bool success;
 }
 
 class RegisterController
 {
-    public async Task ClickRegister(ClientConnection client, int idSchool, string username, string password, string nameChar, int hair, int blessingPoints)
+    public async Task ClickRegister(ClientConnection client, RegisterRequestPacket registerPacket)
     {
         int weapon = 0, helmet = 0, armor = 0, legArmor = 0;
-        switch (idSchool)
+        switch (registerPacket.idSchool)
         {
             case 1: weapon = 1; helmet = 9; armor = 17; legArmor = 25; break;
             case 2: weapon = 2; helmet = 10; armor = 18; legArmor = 26; break;
@@ -37,15 +37,15 @@ class RegisterController
         {
             Account = new Account
             {
-                Username = username,
-                Password = password,
-                NameChar = nameChar,
-                IDSchool = idSchool,
+                Username = registerPacket.username,
+                Password = registerPacket.password,
+                NameChar = registerPacket.nameChar,
+                IDSchool = registerPacket.idSchool,
                 Level = 1,
                 SkillPoints = 0,
                 StatPoints = 0,
                 Exp = 0,
-                Hair = hair,
+                Hair = registerPacket.hair,
                 Gold = 20000,
                 Gem = 2000,
                 Point0 = 0,
@@ -76,7 +76,7 @@ class RegisterController
                 Skill19 = 0,
                 Skill20 = 0,
                 Clan = null,
-                BlessingPoints = blessingPoints
+                BlessingPoints = registerPacket.blessingPoints
             },
             Equipment = new List<Account_Equipment>
             {
@@ -111,7 +111,7 @@ class RegisterController
 
             registerResult = new RegisterResultPacket
             {
-                cmd = "register_result",
+                cmd = EnumCmdCode.register,
                 success = result.IsSuccessStatusCode
             };
         }
@@ -122,11 +122,15 @@ class RegisterController
 
             registerResult = new RegisterResultPacket
             {
-                cmd = "register_result",
+                cmd = EnumCmdCode.register,
                 success = result.IsSuccessStatusCode
             };
         }
 
-        await RaceManager.Instance.SendPacketToClient(client, registerResult);
+        PacketWriterManager writer = new PacketWriterManager();
+        writer.WriteInt((int)registerResult.cmd);
+        writer.WriteBool(registerResult.success);
+
+        await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
     }
 }

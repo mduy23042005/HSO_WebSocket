@@ -4,12 +4,12 @@ using System.Threading.Tasks;
 
 public class EquipmentRequestPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public int idAccount;
 }
 public class EquipmentResultPacket
 {
-    public string cmd;
+    public EnumCmdCode cmd;
     public List<EquipmentData> equipmentData;
 }
 
@@ -25,7 +25,7 @@ class EquipmentController
 
             EquipmentResultPacket equipmentResult = new EquipmentResultPacket
             {
-                cmd = "equipment_result",
+                cmd = EnumCmdCode.equipment,
                 equipmentData = new List<EquipmentData>()
             };
             foreach (var equippedItem in equipmentData)
@@ -37,12 +37,22 @@ class EquipmentController
                     nameItem0_1 = equippedItem.nameItem0_1,
                     category = equippedItem.category,
                     slotName = equippedItem.slotName,
-                    item0_Attributes = equippedItem.item0_Attributes,
-                    nameAttributes = equippedItem.nameAttributes
                 });
             }
 
-            await RaceManager.Instance.SendPacketToClient(client, equipmentResult);
+            PacketWriterManager writer = new PacketWriterManager();
+            writer.WriteInt((int)equipmentResult.cmd);
+            writer.WriteListCount(equipmentResult.equipmentData.Count);
+            foreach (var item in equipmentResult.equipmentData)
+            {
+                writer.WriteInt(item.id);
+                writer.WriteInt(item.idItem0_1);
+                writer.WriteString(item.nameItem0_1);
+                writer.WriteInt(item.category);
+                writer.WriteString(item.slotName);
+            }
+
+            await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
         }
         catch (Exception ex)
         {
@@ -59,7 +69,7 @@ class EquipmentController
 
             EquipmentResultPacket outfitSpritesResult = new EquipmentResultPacket
             {
-                cmd = "outfitSprites_result",
+                cmd = EnumCmdCode.outfitSprites,
                 equipmentData = new List<EquipmentData>()
             };
             foreach (var equippedItem in equipmentData)
@@ -71,12 +81,22 @@ class EquipmentController
                     nameItem0_1 = equippedItem.nameItem0_1,
                     category = equippedItem.category,
                     slotName = equippedItem.slotName,
-                    item0_Attributes = equippedItem.item0_Attributes,
-                    nameAttributes = equippedItem.nameAttributes
                 });
             }
 
-            await RaceManager.Instance.SendPacketToClient(client, outfitSpritesResult);
+            PacketWriterManager writer = new PacketWriterManager();
+            writer.WriteInt((int)outfitSpritesResult.cmd);
+            writer.WriteListCount(outfitSpritesResult.equipmentData.Count);
+            foreach (var item in outfitSpritesResult.equipmentData)
+            {
+                writer.WriteInt(item.id);
+                writer.WriteInt(item.idItem0_1);
+                writer.WriteString(item.nameItem0_1);
+                writer.WriteInt(item.category);
+                writer.WriteString(item.slotName);
+            }
+
+            await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
         }
         catch (Exception ex)
         {
