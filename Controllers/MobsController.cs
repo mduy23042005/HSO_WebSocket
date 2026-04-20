@@ -6,6 +6,7 @@ public class SyncMobsResultData
 {
     public int id;
     public int idMob;
+    public string nameMob;
     public float posX;
     public float posY;
     public string state;
@@ -17,25 +18,9 @@ public class SyncMobsResultPacket
     public string cmd;
     public List<SyncMobsResultPacket> mobs;
 }
-public class MobsController
+
+public class MoveArea
 {
-    private float moveSpeed = 2f;
-    private float waitAfterMove = 0f;
-    private float changeTargetCooldown = 0f;
-    private bool isAttacking = false;
-
-    private Vector2 position;
-    private Vector2 targetPos;
-    private float direction;
-    private int idState;
-
-    private float visionRadius = 5f;      // vùng nhìn thấy
-    private float attackRange = 0.5f;     // tầm đánh
-    private float attackCooldown = 0f;
-    private float attackInterval = 1.2f; // thời gian giữa 2 đòn
-    private int targetPlayerId = -1;      // player đang bị target
-
-    private static readonly Random random = new Random();
     /// <summary>
     /// centerX = offset(Unity)
     /// minX = posX - sizeX / 2
@@ -43,107 +28,177 @@ public class MobsController
     /// minY = posY - sizeY / 2
     /// maxY = posY + sizeY / 2
     /// </summary>
-    private float minX; // minX, minY ----------- maxX, minY
-    private float minY; //     |                      |
-    private float maxX; //     |                      |
-    private float maxY; // minX, maxY ----------- maxX, maxY
+    public float minX; // minX, minY ----------- maxX, minY
+    public float minY; //     |                      |
+    public float maxX; //     |                      |
+    public float maxY; // minX, maxY ----------- maxX, maxY
+}
+public class MobData
+{
+    public Mob mob;
+    public int id;
+    public int posX;
+    public int posY;
+
+    public MobsController mobsAI;
+}
+public class MobsController
+{
+    private float moveSpeed = 2f;
+    private float waitAfterMove = 0f;
+    private bool isAttacking = false;
+    private MoveArea moveArea;
+
+    private Vector2 currentPosition;
+    private float direction;
+    private int idState;
+
+    private float visionRadius = 5f;      // vùng nhìn thấy
+    private float attackCooldown = 0f;
+    private float attackInterval = 1.2f; // thời gian giữa 2 đòn
+    private int targetPlayerId = -1;      // player đang bị target
+
+    private (int x, int y) startPosition;
+    private (int x, int y) endMovementPosition;
+    private (int x, int y) endAttackPosition;
+    private List<(int x, int y)> path;
+    private int pathIndex;
+    private AStarManager astar = new AStarManager();
+
+    private static readonly Random random = new Random();
 
     public MobsController(float posX, float posY, float sizeX, float sizeY)
     {
-        minX = posX - sizeX / 2;
-        maxX = posX + sizeX / 2;
-        minY = posY - sizeY / 2;
-        maxY = posY + sizeY / 2;
+        moveArea = new MoveArea();
+        moveArea.minX = posX - sizeX / 2;
+        moveArea.maxX = posX + sizeX / 2;
+        moveArea.minY = posY - sizeY / 2;
+        moveArea.maxY = posY + sizeY / 2;
 
-        position = GetRandomPosition();
-        targetPos = position;
+        currentPosition = new Vector2(posX, posY);
     }
 
     public Vector2 GetRandomPosition()
     {
-        float x = (float)(random.NextDouble() * (maxX - minX) + minX);
-        float y = (float)(random.NextDouble() * (maxY - minY) + minY);
+        float x = (float)(random.NextDouble() * (moveArea.maxX - moveArea.minX) + moveArea.minX);
+        float y = (float)(random.NextDouble() * (moveArea.maxY - moveArea.minY) + moveArea.minY);
 
         return new Vector2(x, y);
     }
-    public void Move(float deltaTime)
+    public void Move(float deltaTime, MapData map)
     {
         if (isAttacking)
             return;
 
+        // đang nghỉ
         if (waitAfterMove > 0f)
         {
             waitAfterMove -= deltaTime;
             return;
         }
 
-        // tới target hoặc hết cooldown thì chọn target mới
-        if (Vector2.Distance(position, targetPos) < 0.1f || changeTargetCooldown <= 0f)
+        // chưa có path thì tạo mới
+        if (path == null || path.Count == 0)
         {
-            targetPos = GetRandomPosition();
-            changeTargetCooldown = 1f + (float)random.NextDouble() * 2f; // 1–3s
-            waitAfterMove = 0.3f + (float)random.NextDouble() * 0.7f; // 0.3–1s
+            startPosition = ToGrid(currentPosition);
+
+            do
+            {
+                endMovementPosition = ToGrid(GetRandomPosition());
+            } while (!astar.IsWalkable(map, endMovementPosition.x, endMovementPosition.y));
+
+            path = astar.FindPath(map, moveArea, startPosition.x, startPosition.y, endMovementPosition.x, endMovementPosition.y);
+
+            if (path == null || path.Count == 0)
+                return;
+
+            pathIndex = 0;  
+        }
+
+        // nếu đi hết path thì nghỉ
+        if (pathIndex >= path.Count)
+        {
+            waitAfterMove = 0.3f + (float)random.NextDouble() * 0.7f;
+            path = null; // reset để lần sau tạo path mới
+            startPosition = endMovementPosition;
             return;
         }
 
-        changeTargetCooldown -= deltaTime;
+        // lấy node tiếp theo
+        var node = path[pathIndex];
+        Vector2 targetNode = new Vector2(node.x + 0.5f, node.y + 0.5f);
+        Vector2 directionToTarget = targetNode - currentPosition; // vector hướng tới node tiếp theo
+        float distanceToTarget = directionToTarget.Length();
 
-        // di chuyển về target
-        Vector2 dir = targetPos - position;
-        direction = dir.X; // lấy direction gửi cho client
-
-        if (dir.LengthSquared() > 0.0001f)
+        if (distanceToTarget > 0.05f) // gần tới target node
         {
-            dir = Vector2.Normalize(dir);
-            position += dir * moveSpeed * deltaTime;
+            direction = Math.Sign(directionToTarget.X) != 0 ? Math.Sign(directionToTarget.X) : direction;
+            float step = Math.Min(moveSpeed * deltaTime, 0.4f);
+
+            // giới hạn bước đi không vượt quá khoảng cách tới node
+            Vector2 nextPosition = currentPosition + (directionToTarget / distanceToTarget) * Math.Min(step, distanceToTarget);
+
+            var nextNode = ToGrid(nextPosition);
+
+            // kiểm tra nếu nextNode có thể walkable thì mới di chuyển, nếu không thì reset path
+            if (astar.IsWalkable(map, nextNode.x, nextNode.y))
+            {
+                currentPosition = nextPosition;
+            }
+            else
+            {
+                path = null;
+                return;
+            }
         }
 
-        // đảm bảo không vượt vùng
-        position.X = Clamp(position.X, minX, maxX);
-        position.Y = Clamp(position.Y, minY, maxY);
+        // kiểm tra chuyển Node
+        if (Vector2.Distance(currentPosition, targetNode) < 0.1f)
+        {
+            pathIndex++;
+        }
     }
-    private float Clamp(float value, float min, float max)
+    private (int x, int y) ToGrid(Vector2 pos)
     {
-        if (value < min) return min;
-        if (value > max) return max;
-        return value;
+        return ((int)Math.Floor(pos.X), (int)Math.Floor(pos.Y));
     }
 
     private int FindNearestPlayerInVision()
     {
-        float minDistSq = float.MaxValue;
-        int nearestPlayerId = -1;
+        float minDistance = float.MaxValue; //gán 1 số cực lớn để đánh dấu chưa có player nào gần nhất
+        int nearestPlayer = -1;
 
-        foreach (var kv in CacheManager.Instance.accounts)
+        foreach (var kv in CacheManager.Instance.GetAllAccountData())
         {
             var playerData = kv.Value.playerTransformData;
-            if (playerData == null) continue;
+            if (playerData == null) 
+                continue;
 
-            Vector2 playerPos = new Vector2(playerData.positionData.x, playerData.positionData.y);
-            float distSq = Vector2.DistanceSquared(position, playerPos);
+            Vector2 playerPosition = new Vector2(playerData.positionData.x, playerData.positionData.y);
+            float distance = Vector2.Distance(currentPosition, playerPosition);
 
-            if (distSq <= visionRadius * visionRadius && distSq < minDistSq)
+            if (distance <= visionRadius && distance < minDistance)
             {
-                minDistSq = distSq;
-                nearestPlayerId = kv.Key;
+                minDistance = distance; // cập nhật player gần nhất
+                nearestPlayer = kv.Key;
             }
         }
 
-        return nearestPlayerId;
+        return nearestPlayer;
     }
-    public void Attack(float deltaTime)
+    public void Attack(float deltaTime, MapData map)
     {
         // cooldown đòn đánh
         if (attackCooldown > 0f)
             attackCooldown -= deltaTime;
 
-        // Nếu chưa có target => tìm target
+        // Nếu chưa có target player thì tìm target player
         if (targetPlayerId == -1)
         {
             targetPlayerId = FindNearestPlayerInVision();
             if (targetPlayerId == -1)
             {
-                // không attack nữa => reset
+                // không attack nữa thì reset
                 isAttacking = false;
                 idState = 0;
                 return;
@@ -155,35 +210,102 @@ public class MobsController
         {
             targetPlayerId = -1;
             isAttacking = false;
-            idState = 0; // reset khi mất target
+            idState = 0; // reset khi mất target player
             return;
         }
 
-        Vector2 playerPos = new Vector2(account.playerTransformData.positionData.x, account.playerTransformData.positionData.y);
-        Vector2 dir = playerPos - position;
-        float distSq = dir.LengthSquared();
+        Vector2 playerPosition = new Vector2(account.playerTransformData.positionData.x, account.playerTransformData.positionData.y);
+        Vector2 directionToPlayer = playerPosition - currentPosition;
+        float distanceToPlayer = directionToPlayer.Length();
+        // cập nhật hướng để gửi tới client
+        direction = directionToPlayer.X;
 
-        // Player ra khỏi vùng nhìn
-        if (distSq > visionRadius * visionRadius)
+        // player ra khỏi vùng nhìn thấy thì isAttacking = false
+        // khi vào hàm Move() thì path nó vẫn còn tồn tại và mob vẫn chưa đi hết path nên hàm FindPathForMob() không chạy mà nó sẽ di chuyển tới hết path return
+        // khi hết path return thì quay lại logic như cũ
+        if (distanceToPlayer > visionRadius)
         {
             targetPlayerId = -1;
             isAttacking = false;
-            idState = 0; // reset khi out vision
+            idState = 0;
 
+            // nếu dí theo player mà ra khỏi moveArea thì tìm đường về moveArea
+            if (currentPosition.X < moveArea.minX || currentPosition.X > moveArea.maxX || currentPosition.Y < moveArea.minY || currentPosition.Y > moveArea.maxY)
+            {
+                float returnX = Clamp(currentPosition.X, moveArea.minX, moveArea.maxX);
+                float returnY = Clamp(currentPosition.Y, moveArea.minY, moveArea.maxY);
+
+                startPosition = ToGrid(currentPosition);
+                endMovementPosition = ToGrid(new Vector2(returnX, returnY));
+
+                path = astar.FindPath(map, startPosition.x, startPosition.y, endMovementPosition.x, endMovementPosition.y);
+
+                pathIndex = 0;
+            }
+            else
+            {
+                path = null;
+            }
             return;
         }
 
         isAttacking = true;
 
-        // cập nhật hướng gửi client
-        direction = dir.X;
-
-        // chưa vào tầm đánh => lao tới
-        if (distSq > attackRange * attackRange && dir.LengthSquared() > 0.0001f)
+        // tìm path tới player (endAttackPosition != path[path.Count - 1] nghĩa là nếu player move endAttackPosition sẽ đổi thì path cũng phải đổi theo)
+        if (path == null || path.Count == 0 || pathIndex >= path.Count || endAttackPosition != path[path.Count - 1])
         {
-            dir = Vector2.Normalize(dir);
-            position += dir * moveSpeed * deltaTime;
-            return;
+            startPosition = ToGrid(currentPosition);
+            endAttackPosition = ToGrid(playerPosition);
+
+            // cho phép vượt ra khỏi vùng moveArea để dí theo player
+            path = astar.FindPath(map, startPosition.x, startPosition.y, endAttackPosition.x, endAttackPosition.y);
+
+            if (path == null || path.Count == 0)
+                return;
+
+            pathIndex = 0;
+
+            if (pathIndex >= path.Count)
+            {
+                path = null; // reset để lần sau tạo path mới
+                startPosition = endMovementPosition;
+                return;
+            }
+        }
+        // bắt đầu lao tới player
+        var node = path[pathIndex];
+        Vector2 targetNode = new Vector2(node.x + 0.5f, node.y + 0.5f);
+        Vector2 directionToTarget = targetNode - currentPosition; // vector hướng tới node tiếp theo
+        float distanceToTarget = directionToTarget.Length();
+
+        if (distanceToTarget > 0.05f) // gần tới target node
+        {
+            direction = Math.Sign(directionToTarget.X) != 0 ? Math.Sign(directionToTarget.X) : direction;
+            float step = Math.Min(moveSpeed * deltaTime, 0.4f);
+
+            // giới hạn bước đi không vượt quá khoảng cách tới node
+            Vector2 nextPosition = currentPosition + (directionToTarget / distanceToTarget) * Math.Min(step, distanceToTarget);
+
+            var nextNode = ToGrid(nextPosition);
+            Vector2 oldPosition = currentPosition; // lưu vị trí cũ để nếu nextNode không hợp lệ thì callback về vị trí cũ
+
+            // kiểm tra nếu nextNode có thể walkable thì mới di chuyển, nếu không thì reset path
+            if (astar.IsWalkable(map, nextNode.x, nextNode.y))
+            {
+                currentPosition = nextPosition;
+            }
+            else
+            {
+                currentPosition = oldPosition;
+                path = null;
+                return;
+            }
+        }
+
+        // kiểm tra chuyển Node
+        if (Vector2.Distance(currentPosition, targetNode) < 0.1f)
+        {
+            pathIndex++;
         }
 
         if (attackCooldown <= 0f)
@@ -194,10 +316,16 @@ public class MobsController
             // xử lý damage tại đây
         }
     }
-
-    public Vector2 GetPosition()
+    private float Clamp(float value, float min, float max)
     {
-        return position;
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    public Vector2 GetCurrentPosition()
+    {
+        return currentPosition;
     }
     public string GetState()
     {

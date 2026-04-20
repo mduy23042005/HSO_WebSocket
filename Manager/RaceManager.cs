@@ -1,8 +1,6 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net.WebSockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -205,7 +203,7 @@ public sealed class RaceManager
         if (client == null) return;
 
         int idAccount = GetIDAccount(client);
-        string nameAccount = CacheManager.Instance.accounts.TryGetValue(idAccount, out var value) ? value.account.NameChar : null;
+        string nameAccount = CacheManager.Instance.GetAllAccountData().TryGetValue(idAccount, out var value) ? value.account.NameChar : null;
 
         if (idAccount != 0)
         {
@@ -271,7 +269,7 @@ public sealed class RaceManager
         foreach (var client in needCleanup)
         {
             int idAccount = GetIDAccount(client);
-            string nameAccount = CacheManager.Instance.accounts.TryGetValue(idAccount, out var value) ? value.account.NameChar : null;
+            string nameAccount = CacheManager.Instance.GetAllAccountData().TryGetValue(idAccount, out var value) ? value.account.NameChar : null;
 
             if (idAccount != 0)
             {

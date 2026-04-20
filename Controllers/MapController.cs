@@ -1,0 +1,73 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+
+public enum TileType
+{
+    Ground = 0,
+    Water = 1,
+    Wall = 2,
+    Obstacle = 3
+}
+public class MapData
+{
+    public Map map;
+    public List<MobData> mobsData;
+    public List<NPCData> npcsData;
+
+    public int width;
+    public int height;
+
+    public int offsetX;
+    public int offsetY;
+
+    public byte[,] tiles;
+}
+public class MapController
+{
+    public void InitMap(MapData mapData)
+    {
+        string path = $"D:/Unity project/HSO_WebSocket/Map/{mapData.map.IDMap}.bin";
+
+        if (!File.Exists(path))
+        {
+            return;
+        }
+
+        using (BinaryReader reader = new BinaryReader(File.Open(path, FileMode.Open)))
+        {
+            mapData.width = reader.ReadInt32();
+            mapData.height = reader.ReadInt32();
+
+            mapData.offsetX = reader.ReadInt32();
+            mapData.offsetY = reader.ReadInt32();
+
+            mapData.tiles = new byte[mapData.width, mapData.height];
+
+            for (int y = 0; y < mapData.height; y++)
+            {
+                for (int x = 0; x < mapData.width; x++)
+                {
+                    mapData.tiles[x, y] = reader.ReadByte();
+                }
+            }
+        }
+    }
+
+    public bool IsWalkable(MapData mapData, float worldX, float worldY)
+    {
+        if (mapData == null)
+        {
+            return false;
+        }
+
+        int x = (int)Math.Floor(worldX) - mapData.offsetX;
+        int y = (int)Math.Floor(worldY) - mapData.offsetY;
+
+        if (x < 0 || y < 0 || x >= mapData.width || y >= mapData.height)
+            return false;
+
+        return mapData.tiles[x, y] == (byte)TileType.Ground;
+    }
+}
+

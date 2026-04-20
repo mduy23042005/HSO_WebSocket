@@ -15,6 +15,7 @@
 
     syncMobData = 0x0100,
 
+    syncCallBack = 0x0140,
     syncPlayerData = 0x0150,
     syncAtkData = 0x0151,
 }

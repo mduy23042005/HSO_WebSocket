@@ -95,8 +95,6 @@ public class WebSocketServerManager
     }
     private async Task LoadData()
     {
-        string loadNPC = $"{WebAPIManager.Instance.GetApiUrl()}/api/load/NPC/full";
-        string loadMob = $"{WebAPIManager.Instance.GetApiUrl()}/api/load/Mob/full";
         string loadMap = $"{WebAPIManager.Instance.GetApiUrl()}/api/load/Map/full";
         string loadItem0 = $"{WebAPIManager.Instance.GetApiUrl()}/api/load/Item0/full";
         string loadItem1 = $"{WebAPIManager.Instance.GetApiUrl()}/api/load/Item1/full";
@@ -107,61 +105,71 @@ public class WebSocketServerManager
         HttpResponseMessage res;
         string json;
 
-        //Load NPC
-        res = await WebAPIManager.Instance.GetHttpClient().GetAsync(loadNPC);
-        json = await res.Content.ReadAsStringAsync();
-        var npcList = JsonConvert.DeserializeObject<List<NPC>>(json);
-        if (npcList != null)
-        {
-            foreach (var npc in npcList)
-            {
-                CacheManager.Instance.AddNPC(new NPCData
-                {
-                    npc = npc
-                });
-            }
-        }
-        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
-        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded NPC data successfully! [{CacheManager.Instance.GetCountNPC()}]");
-
-        //Load Mob
-        res = await WebAPIManager.Instance.GetHttpClient().GetAsync(loadMob);
-        json = await res.Content.ReadAsStringAsync();
-        var mobList = JsonConvert.DeserializeObject<List<Mob>>(json);
-        if (mobList != null)
-        {
-            foreach (var mob in mobList)
-            {
-                CacheManager.Instance.AddMob(new MobData
-                {
-                    mob = mob
-                });
-            }
-        }
-        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
-        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Mob data successfully! [{CacheManager.Instance.GetCountMob()}]");
-
-        //Load Map
+        #region Load Map
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(loadMap);
         json = await res.Content.ReadAsStringAsync();
         var mapList = JsonConvert.DeserializeObject<List<MapData>>(json);
         if (mapList != null)
         {
-            foreach (var map in mapList)
+            foreach (var mapData in mapList)
             {
-                if (map.mobsData != null)
-                {
-                    foreach (var mob in map.mobsData)
-                    {
-                        mob.mobsAI = new MobsController(mob.posX, mob.posY, 6, 6);
-                    }
-                }
-                CacheManager.Instance.AddMap(map);
+                CacheManager.Instance.AddMap(mapData);
+                CacheManager.Instance.AddClientMap(mapData);
+
+                MapController mapController = new MapController();
+                mapController.InitMap(mapData);
             }
         }
         time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
-        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Map data successfully! [{CacheManager.Instance.GetCountMap()}]");
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Inited Map data successfully! [{CacheManager.Instance.GetCountInitedMap()}]");
 
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Map data successfully! [{CacheManager.Instance.GetCountMap()}]");
+        #endregion
+
+        #region Load NPC
+        if (mapList != null)
+        {
+            foreach (var map in mapList)
+            {
+                foreach (var npcData in map.npcsData)
+                {
+                    CacheManager.Instance.AddNPC(new NPCData
+                    {
+                        npc = npcData.npc,
+                        posX = npcData.posX,
+                        posY = npcData.posY,
+                    });
+                }
+            }
+        }
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded NPC data successfully! [{CacheManager.Instance.GetCountNPC()}]");
+        #endregion
+
+        #region Load Mob
+        if (mapList != null)
+        {
+            foreach (var map in mapList)
+            {
+                foreach (var mobData in map.mobsData)
+                {
+                    mobData.mobsAI = new MobsController(mobData.posX, mobData.posY, 6, 6);
+                    CacheManager.Instance.AddMob(new MobData
+                    {
+                        mob = mobData.mob,
+                        id = mobData.id,
+                        posX = mobData.posX,
+                        posY = mobData.posY,
+                    });
+                }
+            }
+        }
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Mob data successfully! [{CacheManager.Instance.GetCountMob()}]");
+        #endregion
+
+        #region Load Item0 - Item4
         //Load Item0
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(loadItem0);
         json = await res.Content.ReadAsStringAsync();
@@ -240,6 +248,7 @@ public class WebSocketServerManager
         }
         time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
         Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Item4 data successfully! [{CacheManager.Instance.GetCountItem4()}]");
+        #endregion
 
         time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
         Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded all data successfully!");
@@ -362,54 +371,85 @@ public class WebSocketServerManager
             {
                 float deltaTime = 1f / targetTickRate;
 
-                // Update mob logic
-                var mobs = CacheManager.Instance.GetMap(1).mobsData.ToArray(); //tạm thời là mà map có id 1, sau này khi main player ở map nào thì gửi map đó
-                foreach (var mob in mobs)
+                //tạo danh sách các map có player
+                var mapPlayers = new Dictionary<int, List<ClientConnection>>();
+
+                var clients = RaceManager.Instance.GetAllClients();
+
+                foreach (var client in clients)
                 {
-                    mob.mobsAI.Attack(deltaTime);
-                    mob.mobsAI.Move(deltaTime);
+                    //kiểm tra player có hợp lệ không
+                    int idAccount = RaceManager.Instance.GetIDAccount(client);
+                    if (idAccount <= 0) continue;
+
+                    var acc = CacheManager.Instance.GetAccountData(idAccount);
+                    if (acc?.playerTransformData == null) continue;
+
+                    //thêm player vào map
+                    int idMap = CacheManager.Instance.GetClientMapID(acc.playerData.nameMap);
+
+                    if (!mapPlayers.ContainsKey(idMap))
+                        mapPlayers[idMap] = new List<ClientConnection>();
+
+                    mapPlayers[idMap].Add(client);
                 }
 
-                // Build sync packet
-                var mobSnapshots = new List<SyncMobsResultData>();
-                foreach (var mob in mobs)
+                foreach (var kv in mapPlayers)
                 {
-                    var pos = mob.mobsAI.GetPosition();
-                    mobSnapshots.Add(new SyncMobsResultData
-                    {
-                        id = mob.id,
-                        idMob = mob.mob.IDMob,
-                        posX = pos.X,
-                        posY = pos.Y,
-                        state = mob.mobsAI.GetState(),
-                        idState = mob.mobsAI.GetIDState(),
-                        direction = mob.mobsAI.GetDirection(),
-                    });
-                }
+                    int mapId = kv.Key;
+                    var clientsInMap = kv.Value;
 
-                if (mobSnapshots.Count > 0)
-                {
-                    var syncMobData = new
-                    {
-                        cmd = EnumCmdCode.syncMobData,
-                        mobsData = mobSnapshots
-                    };
+                    var map = CacheManager.Instance.GetMap(mapId);
+                    if (map == null || map.mobsData == null)
+                        continue;
+                    var mobs = map.mobsData;
 
-                    PacketWriterManager writer = new PacketWriterManager();
-                    writer.WriteInt((int)syncMobData.cmd);
-                    writer.WriteListCount(syncMobData.mobsData.Count);
-                    foreach (var mobData in syncMobData.mobsData)
+                    var mobSnapshots = new List<SyncMobsResultData>();
+                    foreach (var mob in mobs)
                     {
-                        writer.WriteInt(mobData.id);
-                        writer.WriteInt(mobData.idMob);
-                        writer.WriteFloat(mobData.posX);
-                        writer.WriteFloat(mobData.posY);
-                        writer.WriteString(mobData.state);
-                        writer.WriteInt(mobData.idState);
-                        writer.WriteInt(mobData.direction);
+                        mob.mobsAI.Attack(deltaTime, map);
+                        mob.mobsAI.Move(deltaTime, map);
+
+                        var pos = mob.mobsAI.GetCurrentPosition();
+                        mobSnapshots.Add(new SyncMobsResultData
+                        {
+                            id = mob.id,
+                            idMob = mob.mob.IDMob,
+                            nameMob = mob.mob.NameMob,
+                            posX = pos.X,
+                            posY = pos.Y,
+                            state = mob.mobsAI.GetState(),
+                            idState = mob.mobsAI.GetIDState(),
+                            direction = mob.mobsAI.GetDirection(),
+                        });
                     }
 
-                    await RaceManager.Instance.SendPacketToAllClients(writer.ToArray());
+                    if (mobSnapshots.Count > 0)
+                    {
+                        PacketWriterManager writer = new PacketWriterManager();
+                        writer.WriteInt((int)EnumCmdCode.syncMobData);
+                        writer.WriteListCount(mobSnapshots.Count);
+
+                        foreach (var mobData in mobSnapshots)
+                        {
+                            writer.WriteInt(mobData.id);
+                            writer.WriteInt(mobData.idMob);
+                            writer.WriteString(mobData.nameMob);
+                            writer.WriteFloat(mobData.posX);
+                            writer.WriteFloat(mobData.posY);
+                            writer.WriteString(mobData.state);
+                            writer.WriteInt(mobData.idState);
+                            writer.WriteInt(mobData.direction);
+                        }
+
+                        byte[] packet = writer.ToArray();
+
+                        // gửi CHỈ cho client trong map này
+                        foreach (var client in clientsInMap)
+                        {
+                            await RaceManager.Instance.SendPacketToClient(client, packet);
+                        }
+                    }
                 }
             }
             catch (TaskCanceledException)
@@ -611,6 +651,7 @@ public class WebSocketServerManager
                 case EnumCmdCode.syncPlayerData:
                     var playerData = new PlayerData
                     {
+                        nameMap = reader.ReadString(),
                         idAccount = reader.ReadInt(),
                         nameChar = reader.ReadString(),
                         level = reader.ReadInt(),
@@ -633,7 +674,6 @@ public class WebSocketServerManager
                         pet = reader.ReadInt(),
                         skin = reader.ReadInt(),
                     };
-
 
                     var playerTransformData = new PlayerTransformData 
                     { 
@@ -690,7 +730,47 @@ public class WebSocketServerManager
                         });
                     }
 
+                    var idMap = CacheManager.Instance.GetClientMapID(playerData.nameMap);
+                    var map = CacheManager.Instance.GetMap(idMap);
                     var accountData = CacheManager.Instance.GetAccountData(playerData.idAccount);
+                    MapController mapController = new MapController();
+                    if (!mapController.IsWalkable(map, playerTransformData.positionData.x, playerTransformData.positionData.y))
+                    {
+                        if (accountData != null && accountData.playerTransformData != null)
+                        {
+                            var callBackPacket = new
+                            {
+                                cmd = EnumCmdCode.syncCallBack,
+                                positionData = new
+                                {
+                                    x = accountData.playerTransformData.positionData.x,
+                                    y = accountData.playerTransformData.positionData.y,
+                                    z = accountData.playerTransformData.positionData.z
+                                },
+                                scaleData = new
+                                {
+                                    x = accountData.playerTransformData.scaleData.x,
+                                    y = accountData.playerTransformData.scaleData.y,
+                                    z = accountData.playerTransformData.scaleData.z
+                                }
+                            };
+
+                            PacketWriterManager writer = new PacketWriterManager();
+                            writer.WriteInt((int)callBackPacket.cmd);
+
+                            writer.WriteFloat(callBackPacket.positionData.x);
+                            writer.WriteFloat(callBackPacket.positionData.y);
+                            writer.WriteFloat(callBackPacket.positionData.z);
+
+                            writer.WriteFloat(callBackPacket.scaleData.x);
+                            writer.WriteFloat(callBackPacket.scaleData.y);
+                            writer.WriteFloat(callBackPacket.scaleData.z);
+
+                            await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
+                        }
+                        return;
+                    }
+
                     if (accountData != null)
                     {
                         accountData.playerData = playerData;

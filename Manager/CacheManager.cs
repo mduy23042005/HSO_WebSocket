@@ -1,26 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-
 public class NPCData
 {
     public NPC npc;
     public int posX;
     public int posY;
-}
-public class MobData
-{
-    public Mob mob;
-    public int id;
-    public int posX;
-    public int posY;
-
-    public MobsController mobsAI;
-}
-public class MapData
-{
-    public Map map;
-    public List<MobData> mobsData;
-    public List<NPCData> npcsData;
 }
 
 //Trang bị riêng từng school
@@ -117,91 +101,6 @@ public class ChestData
     public List<Chest_ItemX> chestItems;
 }
 
-public enum PlayerState
-{
-    Stand = 0,
-    Move = 1,
-    Attack = 2,
-    Injured = 3,
-    Die = 4
-}
-public enum Direction
-{
-    Front = 0,
-    Back = 1,
-    Left = 2,
-    Right = 3,
-}
-public class PositionData
-{
-    public float x;
-    public float y;
-    public float z;
-}
-public class RotationData
-{
-    public float x;
-    public float y;
-    public float z;
-}
-public class ScaleData
-{
-    public float x;
-    public float y;
-    public float z;
-}
-public class ColorData
-{
-    public float r;
-    public float g;
-    public float b;
-    public float a;
-}
-public class PartBodyData
-{
-    public string category;
-    public string label;
-    public PositionData positionData;
-    public RotationData rotationData;
-    public ScaleData scaleData;
-    public ColorData colorData;
-}
-public class PlayerStateData
-{
-    public PlayerState stateData;
-    public Direction directionData;
-    public List<PartBodyData> partBodyTransforms;
-}
-public class PlayerTransformData
-{
-    public PositionData positionData;
-    public ScaleData scaleData;
-}
-public class PlayerData
-{
-    public int idAccount;
-    public string nameChar;
-    public int level;
-    public int idSchool;
-    public int hair;
-    public int weapon;
-    public int helmet;
-    public int armor;
-    public int legArmor;
-    public int gloves;
-    public int shoes;
-    public int ring1;
-    public int ring2;
-    public int necklace;
-    public int medal;
-    public int cloak;
-    public int wing;
-    public int skinWing;
-    public int mounts;
-    public int pet;
-    public int skin;
-}
-
 public class AccountData
 {
     public Account account;
@@ -223,21 +122,23 @@ public class CacheManager
     private static readonly Lazy<CacheManager> lazyInstance = new Lazy<CacheManager>(() => new CacheManager());
     public static CacheManager Instance => lazyInstance.Value;
 
-    public Dictionary<int, MapData> maps;
-    public Dictionary<int, MobData> mobs;
-    public Dictionary<int, NPCData> npcs;
+    private Dictionary<int, MapData> maps;
+    private Dictionary<string, int> clientMaps;
+    private Dictionary<int, MobData> mobs;
+    private Dictionary<int, NPCData> npcs;
 
-    public Dictionary<int, Item0Data> item0s;
-    public Dictionary<int, Item1Data> item1s;
-    public Dictionary<int, Item2Data> item2s;
-    public Dictionary<int, Item3Data> item3s;
-    public Dictionary<int, Item4Data> item4s;
+    private Dictionary<int, Item0Data> item0s;
+    private Dictionary<int, Item1Data> item1s;
+    private Dictionary<int, Item2Data> item2s;
+    private Dictionary<int, Item3Data> item3s;
+    private Dictionary<int, Item4Data> item4s;
 
-    public Dictionary<int, AccountData> accounts;
+    private Dictionary<int, AccountData> accounts;
 
     public void InitCache()
     {
         maps = new Dictionary<int, MapData>();
+        clientMaps = new Dictionary<string, int>();
         mobs = new Dictionary<int, MobData>();
         npcs = new Dictionary<int, NPCData>();
 
@@ -264,11 +165,30 @@ public class CacheManager
     {
         return maps.Count;
     }
+    public int GetCountInitedMap()
+    {
+        int count = 0;
+        foreach (var map in maps.Values)
+        {
+            if (map.tiles != null)
+                count++;
+        }
+        return count;
+    }
+    public void AddClientMap(MapData data)
+    {
+        clientMaps[data.map.NameMap] = data.map.IDMap;
+    }
+    public int GetClientMapID(string nameMap)
+    {
+        clientMaps.TryGetValue(nameMap, out var mapId);
+        return mapId;
+    }
 
     //Mob
     public void AddMob(MobData data)
     {
-        mobs[data.mob.IDMob] = data;
+        mobs[data.id] = data;
     }
     public MobData GetMob(int mobId)
     {
@@ -379,6 +299,10 @@ public class CacheManager
     {
         accounts.TryGetValue(accountId, out var data);
         return data;
+    }
+    public Dictionary<int, AccountData> GetAllAccountData()
+    {
+        return accounts;
     }
     public void RemoveAccountData(int accountId)
     {
