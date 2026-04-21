@@ -54,6 +54,7 @@ public class MobsController
     private int idState;
 
     private float visionRadius = 5f;      // vùng nhìn thấy
+    private float attackRange = 1.5f;
     private float attackCooldown = 0f;
     private float attackInterval = 1.2f; // thời gian giữa 2 đòn
     private int targetPlayerId = -1;      // player đang bị target
@@ -249,8 +250,6 @@ public class MobsController
             return;
         }
 
-        isAttacking = true;
-
         // tìm path tới player (endAttackPosition != path[path.Count - 1] nghĩa là nếu player move endAttackPosition sẽ đổi thì path cũng phải đổi theo)
         if (path == null || path.Count == 0 || pathIndex >= path.Count || endAttackPosition != path[path.Count - 1])
         {
@@ -287,7 +286,6 @@ public class MobsController
             Vector2 nextPosition = currentPosition + (directionToTarget / distanceToTarget) * Math.Min(step, distanceToTarget);
 
             var nextNode = ToGrid(nextPosition);
-            Vector2 oldPosition = currentPosition; // lưu vị trí cũ để nếu nextNode không hợp lệ thì callback về vị trí cũ
 
             // kiểm tra nếu nextNode có thể walkable thì mới di chuyển, nếu không thì reset path
             if (astar.IsWalkable(map, nextNode.x, nextNode.y))
@@ -296,7 +294,6 @@ public class MobsController
             }
             else
             {
-                currentPosition = oldPosition;
                 path = null;
                 return;
             }
@@ -308,10 +305,13 @@ public class MobsController
             pathIndex++;
         }
 
-        if (attackCooldown <= 0f)
+        if (Vector2.Distance(currentPosition, playerPosition) <= attackRange && attackCooldown <= 0f)
         {
+            isAttacking = true;
             idState++;
             attackCooldown = attackInterval;
+            path = null; // reset để lần sau tạo path mới
+            startPosition = endMovementPosition;
 
             // xử lý damage tại đây
         }

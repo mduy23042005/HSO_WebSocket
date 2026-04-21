@@ -27,7 +27,7 @@ public class MapController
 {
     public void InitMap(MapData mapData)
     {
-        string path = $"D:/Unity project/HSO_WebSocket/Map/{mapData.map.IDMap}.bin";
+        string path = $"D:/Unity project/HSO_WebSocket/Maps/{mapData.map.IDMap}.bin";
 
         if (!File.Exists(path))
         {
