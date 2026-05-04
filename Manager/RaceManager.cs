@@ -80,6 +80,18 @@ public sealed class RaceManager
             return clientAccountMapping.TryGetValue(client, out var idAccount) ? idAccount : 0;
         }
     }
+    public ClientConnection GetClientByAccountId(int idAccount)
+    {
+        lock (clientCollectionLock)
+        {
+            foreach (var kv in clientAccountMapping)
+            {
+                if (kv.Value == idAccount)
+                    return kv.Key;
+            }
+        }
+        return null;
+    }
 
     private List<ClientConnection> CreateClientSnapshot()
     {

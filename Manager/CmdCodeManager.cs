@@ -18,4 +18,7 @@
     syncCallBack = 0x0140,
     syncPlayerData = 0x0150,
     syncAtkData = 0x0151,
+
+    updateHP = 0x0200,
+    updateMP = 0x0201
 }

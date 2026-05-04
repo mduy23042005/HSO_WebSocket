@@ -88,6 +88,10 @@ public class PlayerData
     public int mounts;
     public int pet;
     public int skin;
+    public int maxHP;
+    public int maxMP;
+    public int hp;
+    public int mp;
 }
 
 public class PlayerSyncData
@@ -110,5 +114,34 @@ public class OtherPlayerSyncData
 
 public class PlayerController
 {
+    private int maxHP;
+    private int maxMP;
 
+    private int hp;
+    private int mp;
+
+    public PlayerController(int idAccount, int point0, int point1, int point2, int point3)
+    {
+        maxHP = point0 * 100;
+        maxMP = point3 * 100;
+        hp = maxHP;
+        mp = maxMP;
+    }
+
+    public int GetMaxHP()
+    {
+        return maxHP;
+    }
+    public int GetMaxMP()
+    {
+        return maxMP;
+    }
+    public int GetHP()
+    {
+        return hp;
+    }
+    public int GetMP()
+    {
+        return mp;
+    }
 }

@@ -21,6 +21,10 @@ public class LogInResultPacket
     public string nameChar;
     public int hair;
     public int level;
+    public int maxHP;
+    public int maxMP;
+    public int hp;
+    public int mp;
     public string message;
 }
 
@@ -57,6 +61,10 @@ public class LogInController
                     nameChar = null,
                     hair = 0,
                     level = 0,
+                    maxHP = 0,
+                    maxMP = 0,
+                    hp = 0,
+                    mp = 0,
                     message = $"Tài khoản {acc.NameChar} đang online."
                 };
             }
@@ -75,6 +83,12 @@ public class LogInController
                 };
 
                 await LoadAccountData(acc);
+
+                loginResult.maxHP = CacheManager.Instance.GetAccountData(acc.IDAccount).playerData.maxHP;
+                loginResult.maxMP = CacheManager.Instance.GetAccountData(acc.IDAccount).playerData.maxMP;
+                loginResult.hp = CacheManager.Instance.GetAccountData(acc.IDAccount).playerData.hp;
+                loginResult.mp = CacheManager.Instance.GetAccountData(acc.IDAccount).playerData.mp;
+
                 time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
                 Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Welcome back {loginResult.nameChar}.");
                 RaceManager.Instance.BindAccountToClient(client, acc.IDAccount);
@@ -91,6 +105,10 @@ public class LogInController
                 nameChar = null,
                 hair = 0,
                 level = 0,
+                maxHP = 0,
+                maxMP = 0,
+                hp = 0,
+                mp = 0,
                 message = "Username hoặc Password không đúng."
             };
             return;
@@ -104,6 +122,10 @@ public class LogInController
         writer.WriteString(loginResult.nameChar);
         writer.WriteInt(loginResult.hair);
         writer.WriteInt(loginResult.level);
+        writer.WriteInt(loginResult.maxHP);
+        writer.WriteInt(loginResult.maxMP);
+        writer.WriteInt(loginResult.hp);
+        writer.WriteInt(loginResult.mp);
         writer.WriteString(loginResult.message);
 
         await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
@@ -163,6 +185,12 @@ public class LogInController
             accountData.inventoryItem4s = inventoryItem4Data;
         }
 
+        accountData.playerData = new PlayerData();
+        var playerController = new PlayerController(accountData.account.IDAccount, acc.Point0, acc.Point1, acc.Point2, acc.Point3);
+        accountData.playerData.maxHP = playerController.GetMaxHP();
+        accountData.playerData.maxMP = playerController.GetMaxMP();
+        accountData.playerData.hp = playerController.GetHP();
+        accountData.playerData.mp = playerController.GetMP();
         CacheManager.Instance.AddAccountData(accountData);
     }
 }

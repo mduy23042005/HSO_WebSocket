@@ -313,7 +313,16 @@ public class MobsController
             path = null; // reset để lần sau tạo path mới
             startPosition = endMovementPosition;
 
-            // xử lý damage tại đây
+            var player = CacheManager.Instance.GetAccountData(targetPlayerId);
+            if (player == null)
+                return;
+            player.playerData.hp = player.playerData.hp - 5;
+            var client = RaceManager.Instance.GetClientByAccountId(targetPlayerId);
+            
+            PacketWriterManager writer = new PacketWriterManager();
+            writer.WriteInt((int)EnumCmdCode.updateHP);
+            writer.WriteInt(player.playerData.hp);
+            RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
         }
     }
     private float Clamp(float value, float min, float max)

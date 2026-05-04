@@ -3,7 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Net.WebSockets;
+using System.Reflection.Emit;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -773,7 +776,29 @@ public class WebSocketServerManager
 
                     if (accountData != null)
                     {
-                        accountData.playerData = playerData;
+                        accountData.playerData.nameMap = playerData.nameMap;
+                        accountData.playerData.idAccount = playerData.idAccount;
+                        accountData.playerData.nameChar = playerData.nameChar;
+                        accountData.playerData.level = playerData.level;
+                        accountData.playerData.idSchool = playerData.idSchool;
+                        accountData.playerData.hair = playerData.hair;
+                        accountData.playerData.weapon = playerData.weapon;
+                        accountData.playerData.helmet = playerData.helmet;
+                        accountData.playerData.armor = playerData.armor;
+                        accountData.playerData.legArmor = playerData.legArmor;
+                        accountData.playerData.gloves = playerData.gloves;
+                        accountData.playerData.shoes = playerData.shoes;
+                        accountData.playerData.ring1 = playerData.ring1;
+                        accountData.playerData.ring2 = playerData.ring2;
+                        accountData.playerData.necklace = playerData.necklace;
+                        accountData.playerData.medal = playerData.medal;
+                        accountData.playerData.cloak = playerData.cloak;
+                        accountData.playerData.wing = playerData.wing;
+                        accountData.playerData.skinWing = playerData.skinWing;
+                        accountData.playerData.mounts = playerData.mounts;
+                        accountData.playerData.pet = playerData.pet;
+                        accountData.playerData.skin = playerData.skin;
+
                         accountData.playerTransformData = playerTransformData;
                         accountData.playerStateData = playerStateData;
                     }
