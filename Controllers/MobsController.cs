@@ -37,6 +37,7 @@ public class MobData
 {
     public Mob mob;
     public int id;
+    public int damage;
     public int posX;
     public int posY;
 
@@ -187,7 +188,7 @@ public class MobsController
 
         return nearestPlayer;
     }
-    public void Attack(float deltaTime, MapData map)
+    public void Attack(float deltaTime, MapData map, int mobDamage)
     {
         // cooldown đòn đánh
         if (attackCooldown > 0f)
@@ -316,11 +317,13 @@ public class MobsController
             var player = CacheManager.Instance.GetAccountData(targetPlayerId);
             if (player == null)
                 return;
-            player.playerData.hp = player.playerData.hp - 5;
-            var client = RaceManager.Instance.GetClientByAccountId(targetPlayerId);
             
+            player.playerData.hp = player.playerData.hp - mobDamage;
+            var client = RaceManager.Instance.GetClientByAccountId(targetPlayerId);
+
             PacketWriterManager writer = new PacketWriterManager();
-            writer.WriteInt((int)EnumCmdCode.updateHP);
+            writer.WriteInt((int)EnumCmdCode.mobsAttack);
+            writer.WriteInt(mobDamage);
             writer.WriteInt(player.playerData.hp);
             RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
         }

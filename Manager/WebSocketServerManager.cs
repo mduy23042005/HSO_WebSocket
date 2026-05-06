@@ -3,10 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Net.WebSockets;
-using System.Reflection.Emit;
-using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -157,14 +154,11 @@ public class WebSocketServerManager
             {
                 foreach (var mobData in map.mobsData)
                 {
+                    //những data khác đã có sẵn khi load API rồi
                     mobData.mobsAI = new MobsController(mobData.posX, mobData.posY, 6, 6);
-                    CacheManager.Instance.AddMob(new MobData
-                    {
-                        mob = mobData.mob,
-                        id = mobData.id,
-                        posX = mobData.posX,
-                        posY = mobData.posY,
-                    });
+                    mobData.damage = mobData.mob.Level * 10;
+
+                    CacheManager.Instance.AddMob(mobData);
                 }
             }
         }
@@ -410,7 +404,7 @@ public class WebSocketServerManager
                     var mobSnapshots = new List<SyncMobsResultData>();
                     foreach (var mob in mobs)
                     {
-                        mob.mobsAI.Attack(deltaTime, map);
+                        mob.mobsAI.Attack(deltaTime, map, mob.damage);
                         mob.mobsAI.Move(deltaTime, map);
 
                         var pos = mob.mobsAI.GetCurrentPosition();
@@ -445,12 +439,10 @@ public class WebSocketServerManager
                             writer.WriteInt(mobData.direction);
                         }
 
-                        byte[] packet = writer.ToArray();
-
-                        // gửi CHỈ cho client trong map này
+                        // gửi chỉ cho client trong map này
                         foreach (var client in clientsInMap)
                         {
-                            await RaceManager.Instance.SendPacketToClient(client, packet);
+                            await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
                         }
                     }
                 }
@@ -540,6 +532,8 @@ public class WebSocketServerManager
                         writer.WriteInt(otherPlayer.otherPlayerData.mounts);
                         writer.WriteInt(otherPlayer.otherPlayerData.pet);
                         writer.WriteInt(otherPlayer.otherPlayerData.skin);
+                        writer.WriteInt(otherPlayer.otherPlayerData.maxHP);
+                        writer.WriteInt(otherPlayer.otherPlayerData.hp);
 
                         writer.WriteFloat(otherPlayer.otherPlayerTransformData.positionData.x);
                         writer.WriteFloat(otherPlayer.otherPlayerTransformData.positionData.y);

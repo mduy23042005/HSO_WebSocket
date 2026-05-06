@@ -19,6 +19,11 @@
     syncPlayerData = 0x0150,
     syncAtkData = 0x0151,
 
-    updateHP = 0x0200,
-    updateMP = 0x0201
+    mobsAttack = 0x0200,
+    mobsHeal = 0x0201,
+    mobsInjured = 0x0202,
+    mobsDie = 0x0203,
+
+    updateHP = 0x0300,
+    updateMP = 0x0301,
 }
