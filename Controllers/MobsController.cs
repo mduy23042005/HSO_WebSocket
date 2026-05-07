@@ -322,10 +322,18 @@ public class MobsController
             var client = RaceManager.Instance.GetClientByAccountId(targetPlayerId);
 
             PacketWriterManager writer = new PacketWriterManager();
-            writer.WriteInt((int)EnumCmdCode.mobsAttack);
+            writer.WriteInt((int)EnumCmdCode.mobsAttackPlayer);
+            writer.WriteInt(player.playerData.idAccount);
             writer.WriteInt(mobDamage);
             writer.WriteInt(player.playerData.hp);
             RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
+
+            PacketWriterManager writer1 = new PacketWriterManager();
+            writer1.WriteInt((int)EnumCmdCode.mobsAttackOtherPlayer);
+            writer1.WriteInt(player.playerData.idAccount);
+            writer1.WriteInt(mobDamage);
+            writer1.WriteInt(player.playerData.hp);
+            RaceManager.Instance.SendPacketToAllClients(writer1.ToArray());
         }
     }
     private float Clamp(float value, float min, float max)
