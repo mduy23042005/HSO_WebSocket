@@ -1,7 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
 public enum PlayerState
@@ -112,6 +109,27 @@ public class OtherPlayerSyncData
     public PlayerStateData otherPlayerStateData;
 }
 
+public class PlayerAttackDataPacket
+{
+    public EnumCmdCode cmd;
+    public int idAccount;
+    public int aimedMobID;
+}
+public class PlayerAttackMobDataResult
+{
+    public EnumCmdCode cmd;
+    public int aimedMobID;
+    public int damage;
+    public int hpMobAfterAttack;
+}
+public class OtherPlayerAttackMobDataResult
+{
+    public EnumCmdCode cmd;
+    public int aimedMobID;
+    public int damage;
+    public int hpMobAfterAttack;
+}
+
 public class PlayerController
 {
     private int maxHP;
@@ -120,12 +138,27 @@ public class PlayerController
     private int hp;
     private int mp;
 
+    private int damage;
+
+    // Contructer này để lấy dữ liệu từ cache ra khi cần tính toán hoặc xử lý logic
+    public PlayerController(int idAccount)
+    {
+        maxHP = CacheManager.Instance.GetAccountData(idAccount).playerData.maxHP;
+        maxMP = CacheManager.Instance.GetAccountData(idAccount).playerData.maxMP;
+        hp = CacheManager.Instance.GetAccountData(idAccount).playerData.hp;
+        mp = CacheManager.Instance.GetAccountData(idAccount).playerData.mp;
+
+        damage = 125;
+    }
+    // Contructer này để vừa login vào nó khởi tạo và đưa vào cache luôn
     public PlayerController(int idAccount, int point0, int point1, int point2, int point3)
     {
         maxHP = point0 * 100;
         maxMP = point3 * 100;
         hp = maxHP;
         mp = maxMP;
+
+        damage = 125;
     }
 
     public int GetMaxHP()
@@ -143,5 +176,41 @@ public class PlayerController
     public int GetMP()
     {
         return mp;
+    }
+
+    public async Task PlayerAttack(ClientConnection client, PlayerAttackDataPacket data)
+    {
+        var mob = CacheManager.Instance.GetMob(data.aimedMobID);
+
+        if (mob == null)
+            return;
+
+        mob.hp = mob.hp - damage;
+
+        PlayerAttackMobDataResult playerAttackDataResult = new PlayerAttackMobDataResult();
+        playerAttackDataResult.cmd = EnumCmdCode.playerAttackMob;
+        playerAttackDataResult.aimedMobID = data.aimedMobID;
+        playerAttackDataResult.damage = damage;
+        playerAttackDataResult.hpMobAfterAttack = mob.hp;
+
+        OtherPlayerAttackMobDataResult otherPlayerAttackDataResult = new OtherPlayerAttackMobDataResult();
+        otherPlayerAttackDataResult.cmd = EnumCmdCode.otherPlayerAttackMob;
+        otherPlayerAttackDataResult.aimedMobID = data.aimedMobID;
+        otherPlayerAttackDataResult.damage = damage;
+        otherPlayerAttackDataResult.hpMobAfterAttack = mob.hp;
+
+        PacketWriterManager writer = new PacketWriterManager();
+        writer.WriteInt((int)playerAttackDataResult.cmd);
+        writer.WriteInt(playerAttackDataResult.aimedMobID);
+        writer.WriteInt(playerAttackDataResult.damage);
+        writer.WriteInt(playerAttackDataResult.hpMobAfterAttack);
+        await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
+
+        PacketWriterManager writer1 = new PacketWriterManager();
+        writer1.WriteInt((int)otherPlayerAttackDataResult.cmd);
+        writer1.WriteInt(otherPlayerAttackDataResult.aimedMobID);
+        writer1.WriteInt(otherPlayerAttackDataResult.damage);
+        writer1.WriteInt(otherPlayerAttackDataResult.hpMobAfterAttack);
+        await RaceManager.Instance.SendPacketToAllClients(writer1.ToArray(), client);
     }
 }

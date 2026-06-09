@@ -9,6 +9,9 @@ public class SyncMobsResultData
     public string nameMob;
     public float posX;
     public float posY;
+    public int maxHP;
+    public int hp;
+    public int level;
     public string state;
     public int idState;
     public int direction;
@@ -37,6 +40,7 @@ public class MobData
 {
     public Mob mob;
     public int id;
+    public int hp;
     public int damage;
     public int posX;
     public int posY;

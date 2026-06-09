@@ -157,6 +157,7 @@ public class WebSocketServerManager
                     //những data khác đã có sẵn khi load API rồi
                     mobData.mobsAI = new MobsController(mobData.posX, mobData.posY, 6, 6);
                     mobData.damage = mobData.mob.Level * 10;
+                    mobData.hp = mobData.mob.HP;
 
                     CacheManager.Instance.AddMob(mobData);
                 }
@@ -413,6 +414,9 @@ public class WebSocketServerManager
                             id = mob.id,
                             idMob = mob.mob.IDMob,
                             nameMob = mob.mob.NameMob,
+                            maxHP = mob.mob.HP,
+                            hp = CacheManager.Instance.GetMob(mob.id).hp,
+                            level = mob.mob.Level,
                             posX = pos.X,
                             posY = pos.Y,
                             state = mob.mobsAI.GetState(),
@@ -432,6 +436,9 @@ public class WebSocketServerManager
                             writer.WriteInt(mobData.id);
                             writer.WriteInt(mobData.idMob);
                             writer.WriteString(mobData.nameMob);
+                            writer.WriteInt(mobData.maxHP);
+                            writer.WriteInt(mobData.hp);
+                            writer.WriteInt(mobData.level);
                             writer.WriteFloat(mobData.posX);
                             writer.WriteFloat(mobData.posY);
                             writer.WriteString(mobData.state);
@@ -873,6 +880,15 @@ public class WebSocketServerManager
                 case EnumCmdCode.outfitSprites:
                     var outfitSpritesController = new EquipmentController();
                     await outfitSpritesController.ReadCacheOutfitSprites(client);
+                    break;
+
+                case EnumCmdCode.playerAttackMob:
+                    var playerAttackDataPacket = new PlayerAttackDataPacket();
+                    playerAttackDataPacket.idAccount = reader.ReadInt();
+                    playerAttackDataPacket.aimedMobID = reader.ReadInt();
+
+                    var playerController = new PlayerController(playerAttackDataPacket.idAccount);
+                    await playerController.PlayerAttack(client, playerAttackDataPacket);
                     break;
 
                 default:

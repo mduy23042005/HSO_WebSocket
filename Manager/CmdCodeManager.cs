@@ -27,4 +27,7 @@
 
     updateHP = 0x0300,
     updateMP = 0x0301,
+
+    playerAttackMob = 0x0400,
+    otherPlayerAttackMob = 0x0401,
 }
