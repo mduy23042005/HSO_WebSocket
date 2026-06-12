@@ -541,6 +541,7 @@ public class WebSocketServerManager
                         writer.WriteInt(otherPlayer.otherPlayerData.skin);
                         writer.WriteInt(otherPlayer.otherPlayerData.maxHP);
                         writer.WriteInt(otherPlayer.otherPlayerData.hp);
+                        writer.WriteInt((int)otherPlayer.otherPlayerData.currentTile);
 
                         writer.WriteFloat(otherPlayer.otherPlayerTransformData.positionData.x);
                         writer.WriteFloat(otherPlayer.otherPlayerTransformData.positionData.y);
@@ -677,6 +678,7 @@ public class WebSocketServerManager
                         mounts = reader.ReadInt(),
                         pet = reader.ReadInt(),
                         skin = reader.ReadInt(),
+                        currentTile = (TileType) reader.ReadInt(),
                     };
 
                     var playerTransformData = new PlayerTransformData 
@@ -799,6 +801,7 @@ public class WebSocketServerManager
                         accountData.playerData.mounts = playerData.mounts;
                         accountData.playerData.pet = playerData.pet;
                         accountData.playerData.skin = playerData.skin;
+                        accountData.playerData.currentTile = playerData.currentTile;  
 
                         accountData.playerTransformData = playerTransformData;
                         accountData.playerStateData = playerStateData;

@@ -4,6 +4,7 @@ using System.IO;
 
 public enum TileType
 {
+    None = -1,
     Ground = 0,
     Water = 1,
     Wall = 2,
@@ -67,7 +68,7 @@ public class MapController
         if (x < 0 || y < 0 || x >= mapData.width || y >= mapData.height)
             return false;
 
-        return mapData.tiles[x, y] == (byte)TileType.Ground;
+        return mapData.tiles[x, y] == (byte)TileType.Ground || mapData.tiles[x, y] == (byte)TileType.Water;
     }
 }
 

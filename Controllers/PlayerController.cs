@@ -89,6 +89,7 @@ public class PlayerData
     public int maxMP;
     public int hp;
     public int mp;
+    public TileType currentTile;
 }
 
 public class PlayerSyncData

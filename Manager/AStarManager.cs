@@ -200,7 +200,7 @@ public class AStarManager
         if (x < 0 || y < 0 || x >= mapData.width || y >= mapData.height)
             return false;
 
-        return mapData.tiles[x, y] == (byte)TileType.Ground;
+        return mapData.tiles[x, y] == (byte)TileType.Ground || mapData.tiles[x, y] == (byte)TileType.Water;
     }
     private List<(int x, int y)> ReconstructPath(NodeAStar node)
     {
