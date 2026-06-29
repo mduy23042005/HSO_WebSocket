@@ -403,32 +403,80 @@ public class WebSocketServerManager
                     var mobs = map.mobsData;
 
                     var mobSnapshots = new List<SyncMobsResultData>();
+                    var mobDeadSnapshots = new List<SyncMobsResultData>();
+
                     foreach (var mob in mobs)
                     {
-                        mob.mobsAI.Attack(deltaTime, map, mob.damage);
-                        mob.mobsAI.Move(deltaTime, map);
-
                         var pos = mob.mobsAI.GetCurrentPosition();
-                        mobSnapshots.Add(new SyncMobsResultData
+                        var hpMob = CacheManager.Instance.GetMob(mob.id).hp;
+
+                        AStarManager astar = new AStarManager();
+                        var currentPosition = CacheManager.Instance.GetMob(mob.id).mobsAI.GetCurrentPosition();
+                        var currentTile = astar.GetTileType(map, currentPosition.X, currentPosition.Y);
+
+                        if (hpMob > 0)
                         {
-                            id = mob.id,
-                            idMob = mob.mob.IDMob,
-                            nameMob = mob.mob.NameMob,
-                            maxHP = mob.mob.HP,
-                            hp = CacheManager.Instance.GetMob(mob.id).hp,
-                            level = mob.mob.Level,
-                            posX = pos.X,
-                            posY = pos.Y,
-                            state = mob.mobsAI.GetState(),
-                            idState = mob.mobsAI.GetIDState(),
-                            direction = mob.mobsAI.GetDirection(),
-                        });
+                            mob.mobsAI.Attack(deltaTime, map, mob.damage);
+                            mob.mobsAI.Move(deltaTime, map);
+
+                            mobSnapshots.Add(new SyncMobsResultData
+                            {
+                                id = mob.id,
+                                idMob = mob.mob.IDMob,
+                                nameMob = mob.mob.NameMob,
+                                maxHP = mob.mob.HP,
+                                hp = hpMob,
+                                level = mob.mob.Level,
+                                posX = pos.X,
+                                posY = pos.Y,
+                                state = mob.mobsAI.GetState(),
+                                idState = mob.mobsAI.GetIDState(),
+                                direction = mob.mobsAI.GetDirection(),
+                                currentTile = currentTile,
+                            });
+                        }
+                        else
+                        {
+                            mob.mobsAI.Die();
+
+                            mobDeadSnapshots.Add(new SyncMobsResultData
+                            {
+                                id = mob.id,
+                                idMob = mob.mob.IDMob,
+                                nameMob = mob.mob.NameMob,
+                                maxHP = mob.mob.HP,
+                                hp = hpMob,
+                                level = mob.mob.Level,
+                                posX = pos.X,
+                                posY = pos.Y,
+                                state = mob.mobsAI.GetState(),
+                                idState = mob.mobsAI.GetIDState(),
+                                direction = mob.mobsAI.GetDirection(),
+                                currentTile = currentTile,
+                            });
+
+                            if (!mob.isRespawning)
+                            {
+                                mob.isRespawning = true;
+
+                                mob.mobsAI.Die();
+
+                                _ = Task.Run(async () =>
+                                {
+                                    await Task.Delay(3000);
+
+                                    mob.hp = mob.mob.HP;
+                                    mob.mobsAI.Respawn();
+                                    mob.isRespawning = false;
+                                });
+                            }
+                        }
                     }
 
                     if (mobSnapshots.Count > 0)
                     {
                         PacketWriterManager writer = new PacketWriterManager();
-                        writer.WriteInt((int)EnumCmdCode.syncMobData);
+                        writer.WriteInt((int)EnumCmdCode.syncMobsData);
                         writer.WriteListCount(mobSnapshots.Count);
 
                         foreach (var mobData in mobSnapshots)
@@ -444,6 +492,34 @@ public class WebSocketServerManager
                             writer.WriteString(mobData.state);
                             writer.WriteInt(mobData.idState);
                             writer.WriteInt(mobData.direction);
+                            writer.WriteInt((int)mobData.currentTile);
+                        }
+
+                        // gửi chỉ cho client trong map này
+                        foreach (var client in clientsInMap)
+                        {
+                            await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
+                        }
+                    }
+                    if (mobDeadSnapshots.Count > 0)
+                    {
+                        PacketWriterManager writer = new PacketWriterManager();
+                        writer.WriteInt((int)EnumCmdCode.syncMobsDeadData);
+                        writer.WriteListCount(mobDeadSnapshots.Count);
+
+                        foreach (var mobDead in mobDeadSnapshots)
+                        {
+                            writer.WriteInt(mobDead.id);
+                            writer.WriteInt(mobDead.idMob);
+                            writer.WriteString(mobDead.nameMob);
+                            writer.WriteInt(mobDead.maxHP);
+                            writer.WriteInt(mobDead.hp);
+                            writer.WriteInt(mobDead.level);
+                            writer.WriteFloat(mobDead.posX);
+                            writer.WriteFloat(mobDead.posY);
+                            writer.WriteString(mobDead.state);
+                            writer.WriteInt(mobDead.idState);
+                            writer.WriteInt(mobDead.direction);
                         }
 
                         // gửi chỉ cho client trong map này
@@ -806,10 +882,6 @@ public class WebSocketServerManager
                         accountData.playerTransformData = playerTransformData;
                         accountData.playerStateData = playerStateData;
                     }
-                    break;
-
-                case EnumCmdCode.syncAtkData:
-
                     break;
 
                 case EnumCmdCode.login:

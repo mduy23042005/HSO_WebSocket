@@ -15,6 +15,7 @@ public class SyncMobsResultData
     public string state;
     public int idState;
     public int direction;
+    public TileType currentTile;
 }
 public class SyncMobsResultPacket
 {
@@ -44,6 +45,7 @@ public class MobData
     public int damage;
     public int posX;
     public int posY;
+    public bool isRespawning;
 
     public MobsController mobsAI;
 }
@@ -53,8 +55,10 @@ public class MobsController
     private float waitAfterMove = 0f;
     private bool isAttacking = false;
     private MoveArea moveArea;
+    private bool isDie = false;
 
     private Vector2 currentPosition;
+    private Vector2 spawnPosition;
     private float direction;
     private int idState;
 
@@ -81,7 +85,8 @@ public class MobsController
         moveArea.minY = posY - sizeY / 2;
         moveArea.maxY = posY + sizeY / 2;
 
-        currentPosition = new Vector2(posX, posY);
+        spawnPosition = new Vector2(posX, posY);
+        currentPosition = spawnPosition;
     }
 
     public Vector2 GetRandomPosition()
@@ -94,6 +99,9 @@ public class MobsController
     public void Move(float deltaTime, MapData map)
     {
         if (isAttacking)
+            return;
+
+        if (isDie)
             return;
 
         // đang nghỉ
@@ -177,7 +185,11 @@ public class MobsController
         foreach (var kv in CacheManager.Instance.GetAllAccountData())
         {
             var playerData = kv.Value.playerTransformData;
+            var hpAimedPlayer = kv.Value.playerData.hp;
             if (playerData == null) 
+                continue;
+
+            if (hpAimedPlayer <= 0)
                 continue;
 
             Vector2 playerPosition = new Vector2(playerData.positionData.x, playerData.positionData.y);
@@ -194,6 +206,9 @@ public class MobsController
     }
     public void Attack(float deltaTime, MapData map, int mobDamage)
     {
+        if (isDie)
+            return;
+
         // cooldown đòn đánh
         if (attackCooldown > 0f)
             attackCooldown -= deltaTime;
@@ -212,7 +227,7 @@ public class MobsController
         }
 
         var account = CacheManager.Instance.GetAccountData(targetPlayerId);
-        if (account == null || account.playerStateData == null)
+        if (account == null || account.playerStateData == null || account.playerData.hp <= 0)
         {
             targetPlayerId = -1;
             isAttacking = false;
@@ -347,6 +362,25 @@ public class MobsController
         return value;
     }
 
+    public void Die()
+    {
+        isAttacking = false;
+        waitAfterMove = 0f;
+        targetPlayerId = -1;
+        path = null;
+        idState = 0;
+        attackCooldown = 0f;
+        isDie = true;
+    }
+    public void Respawn()
+    {
+        currentPosition = spawnPosition;
+        isDie = false;
+        isAttacking = false;
+        targetPlayerId = -1;
+        path = null;
+    }
+
     public Vector2 GetCurrentPosition()
     {
         return currentPosition;
@@ -357,6 +391,8 @@ public class MobsController
             return "Atk";
         if (waitAfterMove > 0f)
             return "Stand";
+        if (isDie)
+            return "Die";
         return "Move";
     }
     public int GetIDState()

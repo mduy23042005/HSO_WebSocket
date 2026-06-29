@@ -13,11 +13,11 @@
 
     equipItem0 = 0x0014,
 
-    syncMobData = 0x0100,
+    syncMobsData = 0x0100,
+    syncMobsDeadData = 0x0101,
 
     syncCallBack = 0x0140,
     syncPlayerData = 0x0150,
-    syncAtkData = 0x0151,
 
     mobsAttackPlayer = 0x0200,
     mobsHeal = 0x0201,
