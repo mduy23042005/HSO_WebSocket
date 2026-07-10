@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http;
 using System.Net.WebSockets;
@@ -363,7 +364,7 @@ public class WebSocketServerManager
         const int targetTickRate = 20;
         const int tickMS = 1000 / targetTickRate;
 
-        var stopwatch = new System.Diagnostics.Stopwatch();
+        var stopwatch = new Stopwatch();
 
         while (!shutdownCts.IsCancellationRequested)
         {
@@ -571,6 +572,7 @@ public class WebSocketServerManager
                             writer.WriteString(mobDead.state);
                             writer.WriteInt(mobDead.idState);
                             writer.WriteInt(mobDead.direction);
+                            writer.WriteInt((int)mobDead.currentTile);
                         }
 
                         // gửi chỉ cho client trong map này

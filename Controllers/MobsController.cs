@@ -231,7 +231,25 @@ public class MobsController
         {
             targetPlayerId = -1;
             isAttacking = false;
-            idState = 0; // reset khi mất target player
+            idState = 0;
+
+            // nếu dí theo player mà player disconnect thì tìm đường về moveArea
+            if (currentPosition.X < moveArea.minX || currentPosition.X > moveArea.maxX || currentPosition.Y < moveArea.minY || currentPosition.Y > moveArea.maxY)
+            {
+                float returnX = Clamp(currentPosition.X, moveArea.minX, moveArea.maxX);
+                float returnY = Clamp(currentPosition.Y, moveArea.minY, moveArea.maxY);
+
+                startPosition = ToGrid(currentPosition);
+                endMovementPosition = ToGrid(new Vector2(returnX, returnY));
+
+                path = astar.FindPath(map, startPosition.x, startPosition.y, endMovementPosition.x, endMovementPosition.y);
+
+                pathIndex = 0;
+            }
+            else
+            {
+                path = null;
+            }
             return;
         }
 
