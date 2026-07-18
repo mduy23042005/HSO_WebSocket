@@ -16,6 +16,59 @@ public enum Direction
     Left = 2,
     Right = 3,
 }
+public enum Category
+{
+    Stand = 0,
+    Move = 1,
+    Atk = 2,
+    Injured = 3,
+    Die = 4,
+}
+public enum Label
+{
+    StandFront = 0,
+    StandBack = 1,
+    StandLeft = 2,
+    StandRight = 3,
+
+    StandFrontFrame0 = 4,
+    StandFrontFrame1 = 5,
+    StandBackFrame0 = 6,
+    StandBackFrame1 = 7,
+    StandLeftFrame0 = 8,
+    StandLeftFrame1 = 9,
+    StandRightFrame0 = 10,
+    StandRightFrame1 = 11,
+
+    MoveFrontFrame0 = 12,
+    MoveFrontFrame1 = 13,
+    MoveBackFrame0 = 14,
+    MoveBackFrame1 = 15,
+    MoveLeftFrame0 = 16,
+    MoveLeftFrame1 = 17,
+    MoveRightFrame0 = 18,
+    MoveRightFrame1 = 19,
+
+    AtkFrontFrame0 = 20,
+    AtkFrontFrame1 = 21,
+    AtkBackFrame0 = 22,
+    AtkBackFrame1 = 23,
+    AtkLeftFrame0 = 24,
+    AtkLeftFrame1 = 25,
+    AtkRightFrame0 = 26,
+    AtkRightFrame1 = 27,
+
+    InjuredFrontFrame0 = 28,
+    InjuredFrontFrame1 = 29,
+    InjuredBackFrame0 = 30,
+    InjuredBackFrame1 = 31,
+    InjuredLeftFrame0 = 32,
+    InjuredLeftFrame1 = 33,
+    InjuredRightFrame0 = 34,
+    InjuredRightFrame1 = 35,
+
+    DieFrame0 = 36
+}
 public class PositionData
 {
     public float x;
@@ -43,8 +96,8 @@ public class ColorData
 }
 public class PartBodyData
 {
-    public string category;
-    public string label;
+    public Category category;
+    public Label label;
     public PositionData positionData;
     public RotationData rotationData;
     public ScaleData scaleData;
@@ -161,7 +214,6 @@ public class PlayerController
 
         damage = 125;
     }
-
     public int GetMaxHP()
     {
         return maxHP;
