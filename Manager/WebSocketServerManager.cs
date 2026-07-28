@@ -433,7 +433,7 @@ public class WebSocketServerManager
     }
     private async Task SyncMobsLoop()
     {
-        const int targetTickRate = 20;
+        const int targetTickRate = 15;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new Stopwatch();
@@ -602,7 +602,7 @@ public class WebSocketServerManager
     }
     private async Task SyncOtherPlayersLoop()
     {
-        const int targetTickRate = 30;
+        const int targetTickRate = 15;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new Stopwatch();
@@ -644,8 +644,11 @@ public class WebSocketServerManager
 
                     foreach (var receiveClient in clientsInMap)
                     {
-                        int receivecClientIDAccount = RaceManager.Instance.GetIDAccount(receiveClient);
-                        if (receivecClientIDAccount <= 0)
+                        int receiveClientIDAccount = RaceManager.Instance.GetIDAccount(receiveClient);
+                        if (receiveClientIDAccount <= 0)
+                            continue;
+
+                        if (clientsInMap.Count - 1 <= 0)
                             continue;
 
                         PacketWriterManager writer = new PacketWriterManager();
@@ -656,7 +659,7 @@ public class WebSocketServerManager
                         {
                             int idAccount = RaceManager.Instance.GetIDAccount(client);
 
-                            if (idAccount <= 0 || idAccount == receivecClientIDAccount)
+                            if (idAccount <= 0 || idAccount == receiveClientIDAccount)
                                 continue;
 
                             var accountData = CacheManager.Instance.GetAccountData(idAccount);
@@ -664,7 +667,6 @@ public class WebSocketServerManager
                                 continue;
 
                             writer.WriteInt(accountData.playerData.idAccount);
-                            writer.WriteString(accountData.playerData.nameChar);
                             writer.WriteInt(accountData.playerData.level);
                             writer.WriteInt(accountData.playerData.idSchool);
                             writer.WriteInt(accountData.playerData.hair);
@@ -689,17 +691,6 @@ public class WebSocketServerManager
                             {
                                 writer.WriteInt((int)partBodyData.category);
                                 writer.WriteInt((int)partBodyData.label);
-
-                                writer.WriteFloat(partBodyData.positionData.x);
-                                writer.WriteFloat(partBodyData.positionData.y);
-
-                                writer.WriteFloat(partBodyData.rotationData.x);
-                                writer.WriteFloat(partBodyData.rotationData.y);
-                                writer.WriteFloat(partBodyData.rotationData.z);
-
-                                writer.WriteFloat(partBodyData.scaleData.x);
-
-                                writer.WriteFloat(partBodyData.colorData.a);
                             }
                         }
 
@@ -822,24 +813,8 @@ public class WebSocketServerManager
                     for (int i = 0; i < countPartBodyTransform; i++)
                     {
                         PartBodyData partBodyData = new PartBodyData();
-                        partBodyData.positionData = new PositionData();
-                        partBodyData.rotationData = new RotationData();
-                        partBodyData.scaleData = new ScaleData();
-                        partBodyData.colorData = new ColorData();
-
                         partBodyData.category = (Category)reader.ReadInt();
                         partBodyData.label = (Label)reader.ReadInt();
-
-                        partBodyData.positionData.x = reader.ReadFloat();
-                        partBodyData.positionData.y = reader.ReadFloat();
-
-                        partBodyData.rotationData.x = reader.ReadFloat();
-                        partBodyData.rotationData.y = reader.ReadFloat();
-                        partBodyData.rotationData.z = reader.ReadFloat();
-
-                        partBodyData.scaleData.x = reader.ReadFloat();
-
-                        partBodyData.colorData.a = reader.ReadFloat();
 
                         playerStateData.partBodyTransforms.Add(partBodyData);
                     }
