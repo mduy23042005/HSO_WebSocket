@@ -149,7 +149,7 @@ public sealed class RaceManager
 
             if (targetClient.socket.State == WebSocketState.Open)
             {
-                _ = targetClient.socket.SendAsync(new ArraySegment<byte>(data), WebSocketMessageType.Binary, true, CancellationToken.None);
+                await targetClient.socket.SendAsync(new ArraySegment<byte>(data), WebSocketMessageType.Binary, true, CancellationToken.None);
             }
         }
         catch (ObjectDisposedException)

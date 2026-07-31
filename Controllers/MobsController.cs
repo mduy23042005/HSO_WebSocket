@@ -12,9 +12,9 @@ public class SyncMobsResultData
     public int maxHP;
     public int hp;
     public int level;
-    public string state;
+    public State state;
     public int idState;
-    public int direction;
+    public Direction direction;
     public TileType currentTile;
 }
 public class SyncMobsResultPacket
@@ -403,24 +403,24 @@ public class MobsController
     {
         return currentPosition;
     }
-    public string GetState()
+    public State GetState()
     {
         if (isAttacking)
-            return "Atk";
+            return State.Attack;
         if (waitAfterMove > 0f)
-            return "Stand";
+            return State.Stand;
         if (isDie)
-            return "Die";
-        return "Move";
+            return State.Die;
+        return State.Move;
     }
     public int GetIDState()
     {
         return idState;
     }
-    public int GetDirection()
+    public Direction GetDirection()
     {
         if (direction < 0)
-            return -1;
-        return 1;
+            return Direction.Right;
+        return Direction.Left;
     }
 }

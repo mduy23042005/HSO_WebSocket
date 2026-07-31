@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
-public enum PlayerState
+public enum State
 {
     Stand = 0,
     Move = 1,
@@ -100,7 +100,7 @@ public class PartBodyData
 }
 public class PlayerStateData
 {
-    public PlayerState stateData;
+    public State stateData;
     public Direction directionData;
     public List<PartBodyData> partBodyTransforms;
 }

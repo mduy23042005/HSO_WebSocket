@@ -55,7 +55,7 @@ public class WebSocketServerManager
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Started Web Socket Server port: 55556 successfully!");
 
             //Khởi động Cleanup Loop để dọn dẹp client ngắt kết nối thụ động
-            _ = InitCleanupLoop(shutdownCts.Token);
+            _ = Task.Run(() => InitCleanupLoop(shutdownCts.Token));
             time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Initialized Cleanup Loop successfully!");
 
@@ -69,16 +69,16 @@ public class WebSocketServerManager
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loading data...");
             await LoadData();
 
-            _ = UpdateMobsLoop();
+            _ = Task.Run(() => UpdateMobsLoop());
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} UpdateMobs loop started.");
 
-            _ = SyncMobsLoop();
+            _ = Task.Run(() => SyncMobsLoop());
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} SyncMobs loop started.");
 
-            _ = SyncOtherPlayersLoop();
+            _ = Task.Run(() => SyncOtherPlayersLoop());
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} SyncOtherPlayers loop started.");
             
-            Task.Run(ListenForQuit);
+            _ = Task.Run(ListenForQuit);
 
             //Chấp nhận kết nối từ client
             time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
@@ -433,7 +433,7 @@ public class WebSocketServerManager
     }
     private async Task SyncMobsLoop()
     {
-        const int targetTickRate = 15;
+        const int targetTickRate = 20;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new Stopwatch();
@@ -495,7 +495,6 @@ public class WebSocketServerManager
                             {
                                 id = mob.id,
                                 idMob = mob.mob.IDMob,
-                                nameMob = mob.mob.NameMob,
                                 maxHP = mob.mob.HP,
                                 hp = hpMob,
                                 level = mob.mob.Level,
@@ -513,7 +512,6 @@ public class WebSocketServerManager
                             {
                                 id = mob.id,
                                 idMob = mob.mob.IDMob,
-                                nameMob = mob.mob.NameMob,
                                 maxHP = mob.mob.HP,
                                 hp = hpMob,
                                 level = mob.mob.Level,
@@ -537,15 +535,14 @@ public class WebSocketServerManager
                         {
                             writer.WriteInt(mobData.id);
                             writer.WriteInt(mobData.idMob);
-                            writer.WriteString(mobData.nameMob);
                             writer.WriteInt(mobData.maxHP);
                             writer.WriteInt(mobData.hp);
                             writer.WriteInt(mobData.level);
                             writer.WriteFloat(mobData.posX);
                             writer.WriteFloat(mobData.posY);
-                            writer.WriteString(mobData.state);
+                            writer.WriteInt((int)mobData.state);
                             writer.WriteInt(mobData.idState);
-                            writer.WriteInt(mobData.direction);
+                            writer.WriteInt((int)mobData.direction);
                             writer.WriteInt((int)mobData.currentTile);
                         }
                         byte[] packet = writer.ToArray();
@@ -565,22 +562,21 @@ public class WebSocketServerManager
                         {
                             writer.WriteInt(mobDead.id);
                             writer.WriteInt(mobDead.idMob);
-                            writer.WriteString(mobDead.nameMob);
                             writer.WriteInt(mobDead.maxHP);
                             writer.WriteInt(mobDead.hp);
                             writer.WriteInt(mobDead.level);
                             writer.WriteFloat(mobDead.posX);
                             writer.WriteFloat(mobDead.posY);
-                            writer.WriteString(mobDead.state);
+                            writer.WriteInt((int)mobDead.state);
                             writer.WriteInt(mobDead.idState);
-                            writer.WriteInt(mobDead.direction);
+                            writer.WriteInt((int)mobDead.direction);
                             writer.WriteInt((int)mobDead.currentTile);
                         }
                         byte[] packet = writer.ToArray();
                         // gửi chỉ cho client trong map này
                         foreach (var client in clientsInMap)
                         {
-                            _ = RaceManager.Instance.SendPacketToClient(client, packet);
+                            await RaceManager.Instance.SendPacketToClient(client, packet);
                         }
                     }
                 }
@@ -602,7 +598,7 @@ public class WebSocketServerManager
     }
     private async Task SyncOtherPlayersLoop()
     {
-        const int targetTickRate = 15;
+        const int targetTickRate = 20;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new Stopwatch();
@@ -695,7 +691,7 @@ public class WebSocketServerManager
                         }
 
                         byte[] packet = writer.ToArray();
-                        _ = RaceManager.Instance.SendPacketToClient(receiveClient, packet);
+                        await RaceManager.Instance.SendPacketToClient(receiveClient, packet);
                     }
                 }
             }
@@ -705,7 +701,7 @@ public class WebSocketServerManager
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[SyncPlayers] Error: " + ex.Message);
+                Console.WriteLine("[Server] Sync other player error: " + ex.Message);
             }
 
             stopwatch.Stop();
@@ -805,7 +801,7 @@ public class WebSocketServerManager
                     };
                         
                     var playerStateData = new PlayerStateData();
-                    playerStateData.stateData = (PlayerState)reader.ReadInt();
+                    playerStateData.stateData = (State)reader.ReadInt();
                     playerStateData.directionData = (Direction)reader.ReadInt();
                     playerStateData.partBodyTransforms = new List<PartBodyData>();
 
