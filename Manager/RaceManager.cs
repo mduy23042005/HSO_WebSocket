@@ -149,6 +149,14 @@ public sealed class RaceManager
 
             if (targetClient.socket.State == WebSocketState.Open)
             {
+                if (targetClient.socket == null)
+                    return;
+
+                if (targetClient.socket.State != WebSocketState.Open)
+                {
+                    MarkLogOut(targetClient);
+                    return;
+                }
                 await targetClient.socket.SendAsync(new ArraySegment<byte>(data), WebSocketMessageType.Binary, true, CancellationToken.None);
             }
         }
@@ -243,7 +251,26 @@ public sealed class RaceManager
     {
         lock (clientCollectionLock)
         {
-            return new List<ClientConnection>(connectedClients);
+            List<ClientConnection> result = new List<ClientConnection>();
+
+            foreach (var client in connectedClients)
+            {
+                if (client == null)
+                    continue;
+
+                if (logoutClients.Contains(client))
+                    continue;
+
+                if (client.socket == null)
+                    continue;
+
+                if (client.socket.State != WebSocketState.Open)
+                    continue;
+
+                result.Add(client);
+            }
+
+            return result;
         }
     }
 

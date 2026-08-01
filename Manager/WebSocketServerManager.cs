@@ -422,7 +422,7 @@ public class WebSocketServerManager
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[SyncMob] Error: " + ex.Message);
+                Console.WriteLine("[Server] Update Mobs error: " + ex.Message);
             }
 
             stopwatch.Stop();
@@ -549,7 +549,7 @@ public class WebSocketServerManager
                         // gửi chỉ cho client trong map này
                         foreach (var client in clientsInMap)
                         {
-                            _ = RaceManager.Instance.SendPacketToClient(client, packet);
+                            await RaceManager.Instance.SendPacketToClient(client, packet);
                         }
                     }
                     if (mobDeadSnapshots.Count > 0)
@@ -587,7 +587,7 @@ public class WebSocketServerManager
             }
             catch (Exception ex)
             {
-                Console.WriteLine("[SyncMob] Error: " + ex.Message);
+                Console.WriteLine("[Server] Sync Mobs error: " + ex.Message);
             }
 
             stopwatch.Stop();
@@ -598,7 +598,7 @@ public class WebSocketServerManager
     }
     private async Task SyncOtherPlayersLoop()
     {
-        const int targetTickRate = 20;
+        const int targetTickRate = 30;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new Stopwatch();

@@ -1,0 +1,33 @@
+## Visual Studio temporary files & user-specific settings
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+
+## Build outputs (Binaries & Intermediate files)
+[Bb]in/
+[Oo]bj/
+[L3]og/
+[L3]ogs/
+
+## NuGet Packages
+packages/
+*.nupkg
+# Ngoại lệ: giữ lại thư mục build/tools của NuGet nếu có dự án dùng
+!packages/build/
+
+## Auto-generated files by Visual Studio
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.mono
+
+## Test result directories
+[Tt]est[Rr]esult*/
+[Bb]uild[L3]og.*
+
+## Operating System files
+.DS_Store
+Thumbs.db
