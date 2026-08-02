@@ -1,7 +1,7 @@
 # 2D MMORPG HSO
 
 > Inspired by **Knight Age** by Teamobi.  
-> This repository contains the **server-side project**.
+> This repository contains the **WebSocket Server project**.
 
 ---
 
@@ -25,7 +25,7 @@ This project was developed to:
 
 # Technologies Used
 
-## Framework
+## Engine
 
 - .NET Framework / .NET Core
 
@@ -41,7 +41,6 @@ This project was developed to:
 ## Development Tools
 
 - Visual Studio 2022
-- SQL Server Management Studio (SSMS)
 - Git & GitHub
 
 ---
@@ -64,7 +63,7 @@ Project/
 
 ---
 
-# Server Requirements
+# System Requirements
 
 - Windows
 - Visual Studio 2022
@@ -81,20 +80,22 @@ git clone https://github.com/mduy23042005/HSO_WebSocket
 
 ---
 
-## 2. Configure the Server
+## 2. Configure the WebSocket Server
 
-- Open the server project in Visual Studio.
+- Open the WebSocket Server project in Visual Studio.
 - Configure the database connection string.
 - Build the project.
 - Set the server port to **55556**.
+- Set the Web API port to **55555**.
 
 ---
 
-## 3. Run the Server
+## 3. Run the WebSocket Server
 
-- Ensure the server port is set to **55556**.
+- Ensure the WebSocket Server port is set to **55556**.
+- Ensure the Web API port is set to **55555**.
 - Start the ASP.NET Web API.
-- Start the WebSocket server.
+- Start the WebSocket Server.
 - Verify that all services are running properly.
 
 ---
