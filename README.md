@@ -57,6 +57,8 @@ Project/
 ├── Models/
 ├── Properties/
 ├── .gitignore
+├── App.config
+├── packages.config
 └── README.md
 ```
 
@@ -74,7 +76,7 @@ Project/
 ## 1. Clone the repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/mduy23042005/HSO_WebSocket
 ```
 
 ---
