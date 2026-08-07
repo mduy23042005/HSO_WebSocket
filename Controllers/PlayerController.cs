@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
 
 public enum State
@@ -190,6 +192,7 @@ public class PlayerController
     private int damage;
 
     // Contructer này để lấy dữ liệu từ cache ra khi cần tính toán hoặc xử lý logic
+    public PlayerController() { }
     public PlayerController(int idAccount)
     {
         maxHP = CacheManager.Instance.GetAccountData(idAccount).playerData.maxHP;
@@ -224,6 +227,95 @@ public class PlayerController
     public int GetMP()
     {
         return mp;
+    }
+
+    public async Task UpdatePlayerInfo(ClientConnection client, byte[] data)
+    {
+        PacketReaderManager reader = new PacketReaderManager(data);
+        EnumCmdCode cmd = (EnumCmdCode)reader.ReadInt();
+        var playerData = new PlayerData
+        {
+            nameMap = reader.ReadString(),
+            idAccount = reader.ReadInt(),
+            level = reader.ReadInt(),
+            idSchool = reader.ReadInt(),
+            hair = reader.ReadInt(),
+            weapon = reader.ReadInt(),
+            helmet = reader.ReadInt(),
+            armor = reader.ReadInt(),
+            legArmor = reader.ReadInt(),
+            currentTile = (TileType)reader.ReadInt(),
+        };
+
+        var playerTransformData = new PlayerTransformData
+        {
+            positionData = new PositionData
+            {
+                x = reader.ReadFloat(),
+                y = reader.ReadFloat(),
+            },
+            scaleData = new ScaleData
+            {
+                x = reader.ReadFloat(),
+            }
+        };
+
+        var playerStateData = new PlayerStateData();
+        playerStateData.stateData = (State)reader.ReadInt();
+        playerStateData.directionData = (Direction)reader.ReadInt();
+        playerStateData.partBodyTransforms = new List<PartBodyData>();
+
+        int countPartBodyTransform = reader.ReadInt();
+        for (int i = 0; i < countPartBodyTransform; i++)
+        {
+            PartBodyData partBodyData = new PartBodyData();
+            partBodyData.category = (Category)reader.ReadInt();
+            partBodyData.label = (Label)reader.ReadInt();
+
+            playerStateData.partBodyTransforms.Add(partBodyData);
+        }
+
+        var idMap = CacheManager.Instance.GetClientMapID(playerData.nameMap);
+        var map = CacheManager.Instance.GetMap(idMap);
+        var accountData = CacheManager.Instance.GetAccountData(playerData.idAccount);
+        MapController mapController = new MapController();
+        if (!mapController.IsWalkable(map, playerTransformData.positionData.x, playerTransformData.positionData.y))
+        {
+            if (accountData != null && accountData.playerTransformData != null)
+            {
+                PacketWriterManager writer = new PacketWriterManager();
+                writer.WriteInt((int)EnumCmdCode.syncCallBack);
+
+                writer.WriteFloat(accountData.playerTransformData.positionData.x);
+                writer.WriteFloat(accountData.playerTransformData.positionData.y);
+                writer.WriteFloat(accountData.playerTransformData.positionData.z);
+
+                writer.WriteFloat(accountData.playerTransformData.scaleData.x);
+                writer.WriteFloat(accountData.playerTransformData.scaleData.y);
+                writer.WriteFloat(accountData.playerTransformData.scaleData.z);
+
+                byte[] packet = writer.ToArray();
+                await RaceManager.Instance.SendPacketToClient(client, packet);
+            }
+            return;
+        }
+
+        if (accountData != null)
+        {
+            accountData.playerData.nameMap = playerData.nameMap;
+            accountData.playerData.idAccount = playerData.idAccount;
+            accountData.playerData.level = playerData.level;
+            accountData.playerData.idSchool = playerData.idSchool;
+            accountData.playerData.hair = playerData.hair;
+            accountData.playerData.weapon = playerData.weapon;
+            accountData.playerData.helmet = playerData.helmet;
+            accountData.playerData.armor = playerData.armor;
+            accountData.playerData.legArmor = playerData.legArmor;
+            accountData.playerData.currentTile = playerData.currentTile;
+
+            accountData.playerTransformData = playerTransformData;
+            accountData.playerStateData = playerStateData;
+        }
     }
 
     public async Task PlayerAttack(ClientConnection client, PlayerAttackDataPacket data)
