@@ -128,6 +128,11 @@ public class LogInController
         writer.WriteInt(loginResult.mp);
         writer.WriteString(loginResult.message);
 
+        EquipmentController equipmentController = new EquipmentController();
+        await equipmentController.ReadCacheEquipment(client);
+        InventoryController inventoryController = new InventoryController();
+        await inventoryController.ReadCacheInventory(client);
+
         await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
     }
     private async Task LoadAccountData(Account acc)
@@ -186,6 +191,16 @@ public class LogInController
         }
 
         accountData.playerData = new PlayerData();
+        accountData.playerData.idAccount = acc.IDAccount;
+        accountData.playerData.level = acc.Level;
+        accountData.playerData.idSchool = acc.IDSchool;
+        accountData.playerData.hair = acc.Hair;
+        accountData.playerData.weapon = accountData.equipments[0].idItem0_1;
+        accountData.playerData.helmet = accountData.equipments[1].idItem0_1;
+        accountData.playerData.armor = accountData.equipments[2].idItem0_1;
+        accountData.playerData.legArmor = accountData.equipments[3].idItem0_1;
+        accountData.playerData.nameMap = $"Ngôi Làng Nhỏ";
+
         var playerController = new PlayerController(accountData.account.IDAccount, acc.Point0, acc.Point1, acc.Point2, acc.Point3);
         accountData.playerData.maxHP = playerController.GetMaxHP();
         accountData.playerData.maxMP = playerController.GetMaxMP();

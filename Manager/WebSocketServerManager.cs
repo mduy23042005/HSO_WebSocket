@@ -845,11 +845,6 @@ public class WebSocketServerManager
                     await equipItem0Controller.EquipItem0(client, equipItem0RequestPacket);
                     break;
 
-                case EnumCmdCode.outfitSprites:
-                    var outfitSpritesController = new EquipmentController();
-                    await outfitSpritesController.ReadCacheOutfitSprites(client);
-                    break;
-
                 case EnumCmdCode.playerAttackMob:
                     var playerAttackDataPacket = new PlayerAttackDataPacket();
                     playerAttackDataPacket.idAccount = reader.ReadInt();

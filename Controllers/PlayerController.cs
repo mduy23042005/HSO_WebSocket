@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.Remoting.Messaging;
 using System.Threading.Tasks;
 
@@ -235,15 +236,7 @@ public class PlayerController
         EnumCmdCode cmd = (EnumCmdCode)reader.ReadInt();
         var playerData = new PlayerData
         {
-            nameMap = reader.ReadString(),
             idAccount = reader.ReadInt(),
-            level = reader.ReadInt(),
-            idSchool = reader.ReadInt(),
-            hair = reader.ReadInt(),
-            weapon = reader.ReadInt(),
-            helmet = reader.ReadInt(),
-            armor = reader.ReadInt(),
-            legArmor = reader.ReadInt(),
             currentTile = (TileType)reader.ReadInt(),
         };
 
@@ -275,11 +268,23 @@ public class PlayerController
             playerStateData.partBodyTransforms.Add(partBodyData);
         }
 
-        var idMap = CacheManager.Instance.GetClientMapID(playerData.nameMap);
-        var map = CacheManager.Instance.GetMap(idMap);
         var accountData = CacheManager.Instance.GetAccountData(playerData.idAccount);
+        if (accountData != null)
+        {
+            accountData.playerData.idAccount = playerData.idAccount;
+            accountData.playerData.currentTile = playerData.currentTile;
+
+            await CheckValidPosition(client, accountData, playerTransformData);
+            accountData.playerStateData = playerStateData;
+        }
+    }
+
+    private async Task CheckValidPosition(ClientConnection client, AccountData accountData, PlayerTransformData newTransformData)
+    {
+        var idMap = CacheManager.Instance.GetClientMapID(accountData.playerData.nameMap);
+        var map = CacheManager.Instance.GetMap(idMap);
         MapController mapController = new MapController();
-        if (!mapController.IsWalkable(map, playerTransformData.positionData.x, playerTransformData.positionData.y))
+        if (!mapController.IsWalkable(map, newTransformData.positionData.x, newTransformData.positionData.y))
         {
             if (accountData != null && accountData.playerTransformData != null)
             {
@@ -288,34 +293,15 @@ public class PlayerController
 
                 writer.WriteFloat(accountData.playerTransformData.positionData.x);
                 writer.WriteFloat(accountData.playerTransformData.positionData.y);
-                writer.WriteFloat(accountData.playerTransformData.positionData.z);
 
                 writer.WriteFloat(accountData.playerTransformData.scaleData.x);
-                writer.WriteFloat(accountData.playerTransformData.scaleData.y);
-                writer.WriteFloat(accountData.playerTransformData.scaleData.z);
 
                 byte[] packet = writer.ToArray();
                 await RaceManager.Instance.SendPacketToClient(client, packet);
             }
-            return;
         }
-
-        if (accountData != null)
-        {
-            accountData.playerData.nameMap = playerData.nameMap;
-            accountData.playerData.idAccount = playerData.idAccount;
-            accountData.playerData.level = playerData.level;
-            accountData.playerData.idSchool = playerData.idSchool;
-            accountData.playerData.hair = playerData.hair;
-            accountData.playerData.weapon = playerData.weapon;
-            accountData.playerData.helmet = playerData.helmet;
-            accountData.playerData.armor = playerData.armor;
-            accountData.playerData.legArmor = playerData.legArmor;
-            accountData.playerData.currentTile = playerData.currentTile;
-
-            accountData.playerTransformData = playerTransformData;
-            accountData.playerStateData = playerStateData;
-        }
+        else 
+            accountData.playerTransformData = newTransformData;
     }
 
     public async Task PlayerAttack(ClientConnection client, PlayerAttackDataPacket data)
