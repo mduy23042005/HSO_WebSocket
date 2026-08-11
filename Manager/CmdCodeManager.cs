@@ -12,7 +12,6 @@
     equipItem0 = 0x0014,
 
     syncMobsData = 0x0100,
-    syncMobsDeadData = 0x0101,
 
     syncCallBack = 0x0140,
     syncPlayerData = 0x0150,

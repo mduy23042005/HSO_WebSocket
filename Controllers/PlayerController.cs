@@ -234,48 +234,51 @@ public class PlayerController
     {
         PacketReaderManager reader = new PacketReaderManager(data);
         EnumCmdCode cmd = (EnumCmdCode)reader.ReadInt();
-        var playerData = new PlayerData
-        {
-            idAccount = reader.ReadInt(),
-            currentTile = (TileType)reader.ReadInt(),
-        };
+        int idAccount = reader.ReadInt();
 
-        var playerTransformData = new PlayerTransformData
-        {
-            positionData = new PositionData
-            {
-                x = reader.ReadFloat(),
-                y = reader.ReadFloat(),
-            },
-            scaleData = new ScaleData
-            {
-                x = reader.ReadFloat(),
-            }
-        };
-
-        var playerStateData = new PlayerStateData();
-        playerStateData.stateData = (State)reader.ReadInt();
-        playerStateData.directionData = (Direction)reader.ReadInt();
-        playerStateData.partBodyTransforms = new List<PartBodyData>();
-
-        int countPartBodyTransform = reader.ReadInt();
-        for (int i = 0; i < countPartBodyTransform; i++)
-        {
-            PartBodyData partBodyData = new PartBodyData();
-            partBodyData.category = (Category)reader.ReadInt();
-            partBodyData.label = (Label)reader.ReadInt();
-
-            playerStateData.partBodyTransforms.Add(partBodyData);
-        }
-
-        var accountData = CacheManager.Instance.GetAccountData(playerData.idAccount);
+        var accountData = CacheManager.Instance.GetAccountData(idAccount);
         if (accountData != null)
         {
-            accountData.playerData.idAccount = playerData.idAccount;
-            accountData.playerData.currentTile = playerData.currentTile;
+            TileType currentTile = (TileType)reader.ReadInt();
+            accountData.playerData.currentTile = currentTile;
 
-            await CheckValidPosition(client, accountData, playerTransformData);
-            accountData.playerStateData = playerStateData;
+            if (accountData.playerTransformData == null)
+            {
+                accountData.playerTransformData = new PlayerTransformData();
+                accountData.playerTransformData.positionData = new PositionData();
+                accountData.playerTransformData.scaleData = new ScaleData();
+            }
+            accountData.playerTransformData.positionData.x = reader.ReadFloat();
+            accountData.playerTransformData.positionData.y = reader.ReadFloat();
+            accountData.playerTransformData.scaleData.x = reader.ReadFloat();
+
+            if (accountData.playerStateData == null)
+                accountData.playerStateData = new PlayerStateData();
+            accountData.playerStateData.stateData = (State)reader.ReadInt();
+            accountData.playerStateData.directionData = (Direction)reader.ReadInt();
+
+            if (accountData.playerStateData.partBodyTransforms == null || accountData.playerStateData.partBodyTransforms.Count == 0)
+            {
+                accountData.playerStateData.partBodyTransforms = new List<PartBodyData>();
+
+                PartBodyData faceBodyData = new PartBodyData();
+                faceBodyData.category = (Category)reader.ReadInt();
+                faceBodyData.label = (Label)reader.ReadInt();
+                PartBodyData partBodyData = new PartBodyData();
+                partBodyData.category = (Category)reader.ReadInt();
+                partBodyData.label = (Label)reader.ReadInt();
+
+                accountData.playerStateData.partBodyTransforms.Add(faceBodyData);
+                accountData.playerStateData.partBodyTransforms.Add(partBodyData);
+            }
+            else
+            {
+                accountData.playerStateData.partBodyTransforms[0].category = (Category)reader.ReadInt();
+                accountData.playerStateData.partBodyTransforms[0].label = (Label)reader.ReadInt();
+                accountData.playerStateData.partBodyTransforms[1].category = (Category)reader.ReadInt();
+                accountData.playerStateData.partBodyTransforms[1].label = (Label)reader.ReadInt();
+            }
+            await CheckValidPosition(client, accountData, accountData.playerTransformData);
         }
     }
 

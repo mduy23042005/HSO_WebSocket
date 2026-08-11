@@ -478,106 +478,33 @@ public class WebSocketServerManager
                         continue;
                     var mobs = map.mobsData;
 
-                    var mobSnapshots = new List<SyncMobsResultData>();
-                    var mobDeadSnapshots = new List<SyncMobsResultData>();
+                    PacketWriterManager writer = new PacketWriterManager();
+                    writer.WriteInt((int)EnumCmdCode.syncMobsData);
+                    writer.WriteInt(mobs.Count);
 
                     foreach (var mob in mobs)
                     {
-                        var pos = mob.mobsAI.GetCurrentPosition();
-                        var hpMob = CacheManager.Instance.GetMob(mob.id).hp;
+                        var currentHPMob = CacheManager.Instance.GetMob(mob.id).hp;
+                        var currentTile = astar.GetTileType(map, mob.mobsAI.GetCurrentPosition().X, mob.mobsAI.GetCurrentPosition().Y);
 
-                        var currentPosition = CacheManager.Instance.GetMob(mob.id).mobsAI.GetCurrentPosition();
-                        var currentTile = astar.GetTileType(map, currentPosition.X, currentPosition.Y);
-
-                        if (hpMob > 0)
-                        {
-                            mobSnapshots.Add(new SyncMobsResultData
-                            {
-                                id = mob.id,
-                                idMob = mob.mob.IDMob,
-                                maxHP = mob.mob.HP,
-                                hp = hpMob,
-                                level = mob.mob.Level,
-                                posX = pos.X,
-                                posY = pos.Y,
-                                state = mob.mobsAI.GetState(),
-                                idState = mob.mobsAI.GetIDState(),
-                                direction = mob.mobsAI.GetDirection(),
-                                currentTile = currentTile,
-                            });
-                        }
-                        else
-                        {
-                            mobDeadSnapshots.Add(new SyncMobsResultData
-                            {
-                                id = mob.id,
-                                idMob = mob.mob.IDMob,
-                                maxHP = mob.mob.HP,
-                                hp = hpMob,
-                                level = mob.mob.Level,
-                                posX = pos.X,
-                                posY = pos.Y,
-                                state = mob.mobsAI.GetState(),
-                                idState = mob.mobsAI.GetIDState(),
-                                direction = mob.mobsAI.GetDirection(),
-                                currentTile = currentTile,
-                            });
-                        }
+                        writer.WriteInt(mob.id);
+                        writer.WriteInt(mob.mob.IDMob);
+                        writer.WriteInt(mob.mob.HP);
+                        writer.WriteInt(currentHPMob);
+                        writer.WriteInt(mob.mob.Level);
+                        writer.WriteFloat(mob.mobsAI.GetCurrentPosition().X);
+                        writer.WriteFloat(mob.mobsAI.GetCurrentPosition().Y);
+                        writer.WriteInt((int)mob.mobsAI.GetState());
+                        writer.WriteInt(mob.mobsAI.GetIDState());
+                        writer.WriteInt((int)mob.mobsAI.GetDirection());
+                        writer.WriteInt((int)currentTile);
                     }
 
-                    if (mobSnapshots.Count > 0)
+                    byte[] packet = writer.ToArray();
+                    // gửi chỉ cho client trong map này
+                    foreach (var client in clientsInMap)
                     {
-                        PacketWriterManager writer = new PacketWriterManager();
-                        writer.WriteInt((int)EnumCmdCode.syncMobsData);
-                        writer.WriteListCount(mobSnapshots.Count);
-
-                        foreach (var mobData in mobSnapshots)
-                        {
-                            writer.WriteInt(mobData.id);
-                            writer.WriteInt(mobData.idMob);
-                            writer.WriteInt(mobData.maxHP);
-                            writer.WriteInt(mobData.hp);
-                            writer.WriteInt(mobData.level);
-                            writer.WriteFloat(mobData.posX);
-                            writer.WriteFloat(mobData.posY);
-                            writer.WriteInt((int)mobData.state);
-                            writer.WriteInt(mobData.idState);
-                            writer.WriteInt((int)mobData.direction);
-                            writer.WriteInt((int)mobData.currentTile);
-                        }
-                        byte[] packet = writer.ToArray();
-                        // gửi chỉ cho client trong map này
-                        foreach (var client in clientsInMap)
-                        {
-                            await RaceManager.Instance.SendPacketToClient(client, packet);
-                        }
-                    }
-                    if (mobDeadSnapshots.Count > 0)
-                    {
-                        PacketWriterManager writer = new PacketWriterManager();
-                        writer.WriteInt((int)EnumCmdCode.syncMobsDeadData);
-                        writer.WriteListCount(mobDeadSnapshots.Count);
-
-                        foreach (var mobDead in mobDeadSnapshots)
-                        {
-                            writer.WriteInt(mobDead.id);
-                            writer.WriteInt(mobDead.idMob);
-                            writer.WriteInt(mobDead.maxHP);
-                            writer.WriteInt(mobDead.hp);
-                            writer.WriteInt(mobDead.level);
-                            writer.WriteFloat(mobDead.posX);
-                            writer.WriteFloat(mobDead.posY);
-                            writer.WriteInt((int)mobDead.state);
-                            writer.WriteInt(mobDead.idState);
-                            writer.WriteInt((int)mobDead.direction);
-                            writer.WriteInt((int)mobDead.currentTile);
-                        }
-                        byte[] packet = writer.ToArray();
-                        // gửi chỉ cho client trong map này
-                        foreach (var client in clientsInMap)
-                        {
-                            await RaceManager.Instance.SendPacketToClient(client, packet);
-                        }
+                        await RaceManager.Instance.SendPacketToClient(client, packet);
                     }
                 }
             }
@@ -682,12 +609,11 @@ public class WebSocketServerManager
                             writer.WriteInt((int)accountData.playerStateData.stateData);
                             writer.WriteInt((int)accountData.playerStateData.directionData);
 
-                            writer.WriteListCount(accountData.playerStateData.partBodyTransforms.Count);
-                            foreach (var partBodyData in accountData.playerStateData.partBodyTransforms)
-                            {
-                                writer.WriteInt((int)partBodyData.category);
-                                writer.WriteInt((int)partBodyData.label);
-                            }
+                            writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[0].category);
+                            writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[0].label);
+
+                            writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[1].category);
+                            writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[1].label);
                         }
 
                         byte[] packet = writer.ToArray();
@@ -792,6 +718,7 @@ public class WebSocketServerManager
                     return;
 
                 case EnumCmdCode.register:
+                    Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Received register request from client: {client.ipRemote}.");
                     var registerPacket = new RegisterRequestPacket();
                     registerPacket.idSchool = reader.ReadInt();
                     registerPacket.nameChar = reader.ReadString();
@@ -855,6 +782,7 @@ public class WebSocketServerManager
                     break;
 
                 default:
+                    Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Received unknown command from client: {client.ipRemote}. Command: {cmd}");
                     break;
             }
         }

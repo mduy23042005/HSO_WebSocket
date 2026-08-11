@@ -22,6 +22,9 @@ public class RegisterResultPacket
 
 class RegisterController
 {
+    private TimeZoneInfo vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+    private DateTime time;
+
     public async Task ClickRegister(ClientConnection client, RegisterRequestPacket registerPacket)
     {
         int weapon = 0, helmet = 0, armor = 0, legArmor = 0;
@@ -107,7 +110,8 @@ class RegisterController
 
         if (result.IsSuccessStatusCode)
         {
-            Console.WriteLine("Đăng ký thành công!");
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Register successfully.");
 
             registerResult = new RegisterResultPacket
             {
@@ -118,7 +122,8 @@ class RegisterController
         else
         {
             string errorMsg = await result.Content.ReadAsStringAsync();
-            Console.WriteLine($"Đăng ký thất bại: {errorMsg}");
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Register failed: {errorMsg}");
 
             registerResult = new RegisterResultPacket
             {
