@@ -157,7 +157,7 @@ public sealed class RaceManager
                     MarkLogOut(targetClient);
                     return;
                 }
-                await targetClient.socket.SendAsync(new ArraySegment<byte>(data), WebSocketMessageType.Binary, true, CancellationToken.None);
+                _ = targetClient.socket.SendAsync(new ArraySegment<byte>(data), WebSocketMessageType.Binary, true, CancellationToken.None);
             }
         }
         catch (ObjectDisposedException)

@@ -47,9 +47,9 @@ public class MobData
     public int posY;
     public bool isRespawning;
 
-    public MobsController mobsAI;
+    public MobController mobsAI;
 }
-public class MobsController
+public class MobController
 {
     private float moveSpeed = 2f;
     private float waitAfterMove = 0f;
@@ -77,7 +77,7 @@ public class MobsController
 
     private static readonly Random random = new Random();
 
-    public MobsController(float posX, float posY, float sizeX, float sizeY)
+    public MobController(float posX, float posY, float sizeX, float sizeY)
     {
         moveArea = new MoveArea();
         moveArea.minX = posX - sizeX / 2;

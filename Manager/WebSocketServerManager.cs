@@ -162,7 +162,7 @@ public class WebSocketServerManager
                 foreach (var mobData in map.mobsData)
                 {
                     //những data khác đã có sẵn khi load API rồi
-                    mobData.mobsAI = new MobsController(mobData.posX, mobData.posY, 6, 6);
+                    mobData.mobsAI = new MobController(mobData.posX, mobData.posY, 6, 6);
                     mobData.damage = mobData.mob.Level * 10;
                     mobData.hp = mobData.mob.HP;
 
@@ -433,7 +433,7 @@ public class WebSocketServerManager
     }
     private async Task SyncMobsLoop()
     {
-        const int targetTickRate = 20;
+        const int targetTickRate = 30;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new Stopwatch();
@@ -443,8 +443,7 @@ public class WebSocketServerManager
             stopwatch.Restart();
             try
             {
-                foreach (var kv in mapPlayersForSyncMobs)
-                    kv.Value.Clear();
+                mapPlayersForSyncMobs.Clear();
 
                 var clients = RaceManager.Instance.GetAllClients();
 
@@ -463,7 +462,9 @@ public class WebSocketServerManager
                     int idMap = CacheManager.Instance.GetClientMapID(accountData.playerData.nameMap);
 
                     if (!mapPlayersForSyncMobs.ContainsKey(idMap))
+                    {
                         mapPlayersForSyncMobs[idMap] = new List<ClientConnection>();
+                    }
 
                     mapPlayersForSyncMobs[idMap].Add(client);
                 }
@@ -504,7 +505,7 @@ public class WebSocketServerManager
                     // gửi chỉ cho client trong map này
                     foreach (var client in clientsInMap)
                     {
-                        await RaceManager.Instance.SendPacketToClient(client, packet);
+                        _ = RaceManager.Instance.SendPacketToClient(client, packet);
                     }
                 }
             }
@@ -536,8 +537,7 @@ public class WebSocketServerManager
 
             try
             {
-                foreach (var kv in mapPlayersForSyncPlayers)
-                    kv.Value.Clear();
+                mapPlayersForSyncPlayers.Clear();
 
                 var clients = RaceManager.Instance.GetAllClients();
 
@@ -555,7 +555,9 @@ public class WebSocketServerManager
                     int idMap = CacheManager.Instance.GetClientMapID(accountData.playerData.nameMap);
 
                     if (!mapPlayersForSyncPlayers.ContainsKey(idMap))
+                    {
                         mapPlayersForSyncPlayers[idMap] = new List<ClientConnection>();
+                    }
 
                     mapPlayersForSyncPlayers[idMap].Add(client);
                 }
@@ -563,61 +565,55 @@ public class WebSocketServerManager
                 foreach (var kv in mapPlayersForSyncPlayers)
                 {
                     var clientsInMap = kv.Value;
-                    if (clientsInMap.Count <= 0) continue;
+                    if (clientsInMap.Count <= 0) 
+                        continue;
 
-                    foreach (var receiveClient in clientsInMap)
+                    PacketWriterManager writer = new PacketWriterManager();
+                    writer.WriteInt((int)EnumCmdCode.syncPlayerData);
+                    writer.WriteListCount(clientsInMap.Count);
+
+                    foreach (var client in clientsInMap)
                     {
-                        int receiveClientIDAccount = RaceManager.Instance.GetIDAccount(receiveClient);
-                        if (receiveClientIDAccount <= 0)
+                        int idAccount = RaceManager.Instance.GetIDAccount(client);
+
+                        if (idAccount <= 0)
                             continue;
 
-                        if (clientsInMap.Count - 1 <= 0)
+                        var accountData = CacheManager.Instance.GetAccountData(idAccount);
+                        if (accountData == null || accountData.playerData == null || accountData.playerTransformData == null || accountData.playerStateData == null)
                             continue;
 
-                        PacketWriterManager writer = new PacketWriterManager();
-                        writer.WriteInt((int)EnumCmdCode.syncPlayerData);
-                        writer.WriteListCount(clientsInMap.Count - 1);
+                        writer.WriteInt(accountData.playerData.idAccount);
+                        writer.WriteInt(accountData.playerData.level);
+                        writer.WriteInt(accountData.playerData.idSchool);
+                        writer.WriteInt(accountData.playerData.hair);
+                        writer.WriteInt(accountData.playerData.weapon);
+                        writer.WriteInt(accountData.playerData.helmet);
+                        writer.WriteInt(accountData.playerData.armor);
+                        writer.WriteInt(accountData.playerData.legArmor);
+                        writer.WriteInt(accountData.playerData.maxHP);
+                        writer.WriteInt(accountData.playerData.hp);
+                        writer.WriteInt((int)accountData.playerData.currentTile);
 
-                        foreach (var client in clientsInMap)
-                        {
-                            int idAccount = RaceManager.Instance.GetIDAccount(client);
+                        writer.WriteFloat(accountData.playerTransformData.positionData.x);
+                        writer.WriteFloat(accountData.playerTransformData.positionData.y);
 
-                            if (idAccount <= 0 || idAccount == receiveClientIDAccount)
-                                continue;
+                        writer.WriteFloat(accountData.playerTransformData.scaleData.x);
 
-                            var accountData = CacheManager.Instance.GetAccountData(idAccount);
-                            if (accountData == null || accountData.playerData == null || accountData.playerTransformData == null || accountData.playerStateData == null)
-                                continue;
+                        writer.WriteInt((int)accountData.playerStateData.stateData);
+                        writer.WriteInt((int)accountData.playerStateData.directionData);
 
-                            writer.WriteInt(accountData.playerData.idAccount);
-                            writer.WriteInt(accountData.playerData.level);
-                            writer.WriteInt(accountData.playerData.idSchool);
-                            writer.WriteInt(accountData.playerData.hair);
-                            writer.WriteInt(accountData.playerData.weapon);
-                            writer.WriteInt(accountData.playerData.helmet);
-                            writer.WriteInt(accountData.playerData.armor);
-                            writer.WriteInt(accountData.playerData.legArmor);
-                            writer.WriteInt(accountData.playerData.maxHP);
-                            writer.WriteInt(accountData.playerData.hp);
-                            writer.WriteInt((int)accountData.playerData.currentTile);
+                        writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[0].category);
+                        writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[0].label);
 
-                            writer.WriteFloat(accountData.playerTransformData.positionData.x);
-                            writer.WriteFloat(accountData.playerTransformData.positionData.y);
+                        writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[1].category);
+                        writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[1].label);
+                    }
+                    byte[] packet = writer.ToArray();
 
-                            writer.WriteFloat(accountData.playerTransformData.scaleData.x);
-
-                            writer.WriteInt((int)accountData.playerStateData.stateData);
-                            writer.WriteInt((int)accountData.playerStateData.directionData);
-
-                            writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[0].category);
-                            writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[0].label);
-
-                            writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[1].category);
-                            writer.WriteInt((int)accountData.playerStateData.partBodyTransforms[1].label);
-                        }
-
-                        byte[] packet = writer.ToArray();
-                        await RaceManager.Instance.SendPacketToClient(receiveClient, packet);
+                    foreach (var client in clientsInMap)
+                    {
+                        _ = RaceManager.Instance.SendPacketToClient(client, packet);
                     }
                 }
             }

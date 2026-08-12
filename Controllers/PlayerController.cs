@@ -184,6 +184,7 @@ public class OtherPlayerAttackMobDataResult
 
 public class PlayerController
 {
+    private MapController mapController = new MapController();
     private int maxHP;
     private int maxMP;
 
@@ -286,7 +287,6 @@ public class PlayerController
     {
         var idMap = CacheManager.Instance.GetClientMapID(accountData.playerData.nameMap);
         var map = CacheManager.Instance.GetMap(idMap);
-        MapController mapController = new MapController();
         if (!mapController.IsWalkable(map, newTransformData.positionData.x, newTransformData.positionData.y))
         {
             if (accountData != null && accountData.playerTransformData != null)
@@ -300,7 +300,7 @@ public class PlayerController
                 writer.WriteFloat(accountData.playerTransformData.scaleData.x);
 
                 byte[] packet = writer.ToArray();
-                await RaceManager.Instance.SendPacketToClient(client, packet);
+                _ = RaceManager.Instance.SendPacketToClient(client, packet);
             }
         }
         else 
