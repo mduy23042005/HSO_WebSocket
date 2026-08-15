@@ -313,6 +313,7 @@ This layer is responsible for querying, inserting, updating, and deleting persis
 
 For example, when a player logs into the game:
 
+```text
 Unity Client
      │
      │ Login request
@@ -339,6 +340,7 @@ Server
      │ WebSocket
      ▼
 Unity Client
+```
 
 The same architecture is used for other persistent game data operations.
 
