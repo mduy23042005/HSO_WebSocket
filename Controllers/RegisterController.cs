@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System;
 using System.Threading.Tasks;
 using System.Net.Http;
+using HSO_Server.Models;
 
 public class RegisterRequestPacket
 {
@@ -43,7 +44,7 @@ class RegisterController
                 Username = registerPacket.username,
                 Password = registerPacket.password,
                 NameChar = registerPacket.nameChar,
-                IDSchool = registerPacket.idSchool,
+                Idschool = registerPacket.idSchool,
                 Level = 1,
                 SkillPoints = 0,
                 StatPoints = 0,
@@ -81,24 +82,24 @@ class RegisterController
                 Clan = null,
                 BlessingPoints = registerPacket.blessingPoints
             },
-            Equipment = new List<Account_Equipment>
+            Equipment = new List<AccountEquipment>
             {
-                new Account_Equipment { IDItem0_1 = weapon, SlotName = "Weapon", Category = 1 },
-                new Account_Equipment { IDItem0_1 = helmet, SlotName = "Helmet", Category = 1 },
-                new Account_Equipment { IDItem0_1 = armor, SlotName = "Armor", Category = 1 },
-                new Account_Equipment { IDItem0_1 = legArmor, SlotName = "LegArmor", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "Gloves", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "Shoes", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "Ring1", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "Ring2", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "Necklace", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "Medal", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "Cloak", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "Wing", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "SkinWing", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "Mounts", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "Pet", Category = 1 },
-                new Account_Equipment { IDItem0_1 = 0, SlotName = "Skin", Category = 1 },
+                new AccountEquipment { Iditem01 = weapon, SlotName = "Weapon", Category = 1 },
+                new AccountEquipment { Iditem01 = helmet, SlotName = "Helmet", Category = 1 },
+                new AccountEquipment { Iditem01 = armor, SlotName = "Armor", Category = 1 },
+                new AccountEquipment { Iditem01 = legArmor, SlotName = "LegArmor", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "Gloves", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "Shoes", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "Ring1", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "Ring2", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "Necklace", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "Medal", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "Cloak", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "Wing", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "SkinWing", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "Mounts", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "Pet", Category = 1 },
+                new AccountEquipment { Iditem01 = 0, SlotName = "Skin", Category = 1 },
             }
         };
 

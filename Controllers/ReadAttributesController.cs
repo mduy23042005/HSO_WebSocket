@@ -75,9 +75,9 @@ public class ReadAttributesController
             writer.WriteListCount(equipmentAttributesResult.attributesData.item0_Attributes.Count);
             for (int i = 0; i < equipmentAttributesResult.attributesData.item0_Attributes.Count; i++)
             {
-                writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].ID);
-                writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].IDItem0);
-                writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].IDAttribute);
+                writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].Id);
+                writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].Iditem0);
+                writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].Idattribute);
                 writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].Value);
                 writer.WriteInt(equipmentAttributesResult.attributesData.item0_Attributes[i].Category);
                 writer.WriteString(equipmentAttributesResult.attributesData.nameAttributes[i].NameAttribute);
@@ -135,9 +135,9 @@ public class ReadAttributesController
             writer.WriteListCount(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes.Count);
             for (int i = 0; i < inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes.Count; i++)
             {
-                writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].ID);
-                writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].IDItem0);
-                writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].IDAttribute);
+                writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].Id);
+                writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].Iditem0);
+                writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].Idattribute);
                 writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].Value);
                 writer.WriteInt(inventoryItem0AttributesResult.attributesItem0Data.item0_Attributes[i].Category);
                 writer.WriteString(inventoryItem0AttributesResult.attributesItem0Data.nameAttributes[i].NameAttribute);

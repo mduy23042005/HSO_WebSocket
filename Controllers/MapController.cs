@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using HSO_Server.Models;
 
 public enum TileType
 {
@@ -28,7 +29,7 @@ public class MapController
 {
     public void InitMap(MapData mapData)
     {
-        string path = $"D:/Unity project/HSO_WebSocket/Maps/{mapData.map.IDMap}.bin";
+        string path = $"D:/Unity project/HSO_WebSocket/Maps/{mapData.map.Idmap}.bin";
 
         if (!File.Exists(path))
         {

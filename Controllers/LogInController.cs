@@ -1,8 +1,5 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading.Tasks;
+using HSO_Server.Models;
 
 //class hứng dữ liệu từ client gửi lên
 public class LogInRequestPacket
@@ -50,7 +47,7 @@ public class LogInController
 
         if (acc != null)
         {
-            if (CacheManager.Instance.IsAccountOnline(acc.IDAccount))
+            if (CacheManager.Instance.IsAccountOnline(acc.Idaccount))
             {
                 loginResult = new LogInResultPacket
                 {
@@ -74,24 +71,24 @@ public class LogInController
                 {
                     cmd = EnumCmdCode.login,
                     success = acc != null,
-                    idAccount = acc.IDAccount,
-                    idSchool = acc.IDSchool,
+                    idAccount = acc.Idaccount,
+                    idSchool = acc.Idschool ?? 0,
                     nameChar = acc.NameChar,
-                    hair = acc.Hair,
-                    level = acc.Level,
+                    hair = acc.Hair ?? 0,
+                    level = acc.Level ?? 1,
                     message = $"Đăng nhập {acc.NameChar} thành công."
                 };
 
                 await LoadAccountData(acc);
 
-                loginResult.maxHP = CacheManager.Instance.GetAccountData(acc.IDAccount).playerData.maxHP;
-                loginResult.maxMP = CacheManager.Instance.GetAccountData(acc.IDAccount).playerData.maxMP;
-                loginResult.hp = CacheManager.Instance.GetAccountData(acc.IDAccount).playerData.hp;
-                loginResult.mp = CacheManager.Instance.GetAccountData(acc.IDAccount).playerData.mp;
+                loginResult.maxHP = CacheManager.Instance.GetAccountData(acc.Idaccount).playerData.maxHP;
+                loginResult.maxMP = CacheManager.Instance.GetAccountData(acc.Idaccount).playerData.maxMP;
+                loginResult.hp = CacheManager.Instance.GetAccountData(acc.Idaccount).playerData.hp;
+                loginResult.mp = CacheManager.Instance.GetAccountData(acc.Idaccount).playerData.mp;
 
                 time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
                 Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Welcome back {loginResult.nameChar}.");
-                RaceManager.Instance.BindAccountToClient(client, acc.IDAccount);
+                RaceManager.Instance.BindAccountToClient(client, acc.Idaccount);
             }
         }
         else
@@ -111,7 +108,6 @@ public class LogInController
                 mp = 0,
                 message = "Username hoặc Password không đúng."
             };
-            return;
         }
 
         PacketWriterManager writer = new PacketWriterManager();
@@ -140,32 +136,32 @@ public class LogInController
         HttpResponseMessage res;
         string json;
 
-        string urlEquipment = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.IDAccount}/equipment?idAccount={acc.IDAccount}";
+        string urlEquipment = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.Idaccount}/equipment?idAccount={acc.Idaccount}";
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlEquipment);
         json = await res.Content.ReadAsStringAsync();
         var equipmentData = JsonConvert.DeserializeObject<List<EquipmentData>>(json);
 
-        string urlInventoryItem0 = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.IDAccount}/inventoryItem0?idAccount={acc.IDAccount}";
+        string urlInventoryItem0 = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.Idaccount}/inventoryItem0?idAccount={acc.Idaccount}";
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlInventoryItem0);
         json = await res.Content.ReadAsStringAsync();
         var inventoryItem0Data = JsonConvert.DeserializeObject<List<InventoryItem0Data>>(json);
 
-        string urlInventoryItem1 = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.IDAccount}/inventoryItem1?idAccount={acc.IDAccount}";
+        string urlInventoryItem1 = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.Idaccount}/inventoryItem1?idAccount={acc.Idaccount}";
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlInventoryItem1);
         json = await res.Content.ReadAsStringAsync();
         var inventoryItem1Data = JsonConvert.DeserializeObject<List<InventoryItem1Data>>(json);
 
-        string urlInventoryItem2 = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.IDAccount}/inventoryItem2?idAccount={acc.IDAccount}";
+        string urlInventoryItem2 = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.Idaccount}/inventoryItem2?idAccount={acc.Idaccount}";
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlInventoryItem2);
         json = await res.Content.ReadAsStringAsync();
         var inventoryItem2Data = JsonConvert.DeserializeObject<List<InventoryItem2Data>>(json);
 
-        string urlInventoryItem3 = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.IDAccount}/inventoryItem3?idAccount={acc.IDAccount}";
+        string urlInventoryItem3 = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.Idaccount}/inventoryItem3?idAccount={acc.Idaccount}";
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlInventoryItem3);
         json = await res.Content.ReadAsStringAsync();
         var inventoryItem3Data = JsonConvert.DeserializeObject<List<InventoryItem3Data>>(json);
 
-        string urlInventoryItem4 = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.IDAccount}/inventoryItem4?idAccount={acc.IDAccount}";
+        string urlInventoryItem4 = $"{WebAPIManager.Instance.GetApiUrl()}/api/account/{acc.Idaccount}/inventoryItem4?idAccount={acc.Idaccount}";
         res = await WebAPIManager.Instance.GetHttpClient().GetAsync(urlInventoryItem4);
         json = await res.Content.ReadAsStringAsync();
         var inventoryItem4Data = JsonConvert.DeserializeObject<List<InventoryItem4Data>>(json);
@@ -191,17 +187,17 @@ public class LogInController
         }
 
         accountData.playerData = new PlayerData();
-        accountData.playerData.idAccount = acc.IDAccount;
-        accountData.playerData.level = acc.Level;
-        accountData.playerData.idSchool = acc.IDSchool;
-        accountData.playerData.hair = acc.Hair;
+        accountData.playerData.idAccount = acc.Idaccount;
+        accountData.playerData.level = acc.Level ?? 1;
+        accountData.playerData.idSchool = acc.Idschool ?? 0;
+        accountData.playerData.hair = acc.Hair ?? 0;
         accountData.playerData.weapon = accountData.equipments[0].idItem0_1;
         accountData.playerData.helmet = accountData.equipments[1].idItem0_1;
         accountData.playerData.armor = accountData.equipments[2].idItem0_1;
         accountData.playerData.legArmor = accountData.equipments[3].idItem0_1;
         accountData.playerData.nameMap = $"Ngôi Làng Nhỏ";
 
-        var playerController = new PlayerController(accountData.account.IDAccount, acc.Point0, acc.Point1, acc.Point2, acc.Point3);
+        var playerController = new PlayerController(accountData.account.Idaccount, acc.Point0 ?? 5, acc.Point1 ?? 5, acc.Point2 ?? 5, acc.Point3 ?? 5);
         accountData.playerData.maxHP = playerController.GetMaxHP();
         accountData.playerData.maxMP = playerController.GetMaxMP();
         accountData.playerData.hp = playerController.GetHP();

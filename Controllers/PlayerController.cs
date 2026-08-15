@@ -1,10 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Runtime.Remoting.Messaging;
-using System.Threading.Tasks;
-
-public enum State
+﻿public enum State
 {
     Stand = 0,
     Move = 1,

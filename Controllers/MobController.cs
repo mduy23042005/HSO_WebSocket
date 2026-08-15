@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using HSO_Server.Models;
 
 public class SyncMobsResultData
 {

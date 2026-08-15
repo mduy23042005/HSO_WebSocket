@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using HSO_Server.Models;
 
 public class NPCData
 {
-    public NPC npc;
+    public Npc npc;
     public int posX;
     public int posY;
 }
@@ -12,15 +13,15 @@ public class NPCData
 public class Item0Data
 {
     public Item0 item0;
-    public List<Item0_Attribute> item0_Attributes;
-    public List<Attribute> nameAttributes;
+    public List<Item0Attribute> item0_Attributes;
+    public List<HSO_Server.Models.Attribute> nameAttributes;
 }
 //Trang bị chung
 public class Item1Data
 {
     public Item1 item1;
-    public List<Item1_Attribute> item1_Attributes;
-    public List<Attribute> nameAttributes;
+    public List<Item1Attribute> item1_Attributes;
+    public List<HSO_Server.Models.Attribute> nameAttributes;
 }
 //Vật phẩm nhiệm vụ
 public class Item2Data
@@ -46,8 +47,8 @@ public class EquipmentData
     public string nameItem0_1;
     public int category;
     public string slotName;
-    public List<Item0_Attribute> item0_Attributes;
-    public List<Attribute> nameAttributes;
+    public List<Item0Attribute> item0_Attributes;
+    public List<HSO_Server.Models.Attribute> nameAttributes;
 }
 public class InventoryItem0Data
 {
@@ -58,8 +59,8 @@ public class InventoryItem0Data
     public int category;
     public int idSchool;
     public int level;
-    public List<Item0_Attribute> item0_Attributes;
-    public List<Attribute> nameAttributes;
+    public List<Item0Attribute> item0_Attributes;
+    public List<HSO_Server.Models.Attribute> nameAttributes;
 }
 public class InventoryItem1Data
 {
@@ -68,8 +69,8 @@ public class InventoryItem1Data
     public string nameItem1;
     public string typeItem1;
     public int level;
-    public List<Item1_Attribute> item1_Attributes;
-    public List<Attribute> nameAttributes;
+    public List<Item1Attribute> item1_Attributes;
+    public List<HSO_Server.Models.Attribute> nameAttributes;
 }
 public class InventoryItem2Data
 {
@@ -99,7 +100,7 @@ public class InventoryItem4Data
 }
 public class ChestData
 {
-    public List<Chest_ItemX> chestItems;
+    public List<ChestItemX> chestItems;
 }
 
 public class AccountData
@@ -155,7 +156,7 @@ public class CacheManager
     //Map
     public void AddMap(MapData data)
     {
-        maps[data.map.IDMap] = data;
+        maps[data.map.Idmap] = data;
     }
     public MapData GetMap(int mapId)
     {
@@ -178,7 +179,7 @@ public class CacheManager
     }
     public void AddClientMap(MapData data)
     {
-        clientMaps[data.map.NameMap] = data.map.IDMap;
+        clientMaps[data.map.NameMap] = data.map.Idmap;
     }
     public int GetClientMapID(string nameMap)
     {
@@ -204,7 +205,7 @@ public class CacheManager
     //NPC
     public void AddNPC(NPCData data)
     {
-        npcs[data.npc.IDNPC] = data;
+        npcs[data.npc.Idnpc] = data;
     }
     public NPCData GetNPC(int npcId)
     {
@@ -219,7 +220,7 @@ public class CacheManager
     //Item0
     public void AddItem0(Item0Data data)
     {
-        item0s[data.item0.IDItem0] = data;
+        item0s[data.item0.Iditem0] = data;
     }
     public Item0Data GetItem0(int id)
     {
@@ -234,7 +235,7 @@ public class CacheManager
     //Item1
     public void AddItem1(Item1Data data)
     {
-        item1s[data.item1.IDItem1] = data;
+        item1s[data.item1.Iditem1] = data;
     }
     public Item1Data GetItem1(int id)
     {
@@ -249,7 +250,7 @@ public class CacheManager
     //Item2
     public void AddItem2(Item2Data data)
     {
-        item2s[data.item2.IDItem2] = data;
+        item2s[data.item2.Iditem2] = data;
     }
     public Item2Data GetItem2(int id)
     {
@@ -264,7 +265,7 @@ public class CacheManager
     //Item3
     public void AddItem3(Item3Data data)
     {
-        item3s[data.item3.IDItem3] = data;
+        item3s[data.item3.Iditem3] = data;
     }
     public Item3Data GetItem3(int id)
     {
@@ -279,7 +280,7 @@ public class CacheManager
     //Item4
     public void AddItem4(Item4Data data)
     {
-        item4s[data.item4.IDItem4] = data;
+        item4s[data.item4.Iditem4] = data;
     }
     public Item4Data GetItem4(int id)
     {
@@ -294,7 +295,7 @@ public class CacheManager
     //Account
     public void AddAccountData(AccountData data)
     {
-        accounts[data.account.IDAccount] = data;
+        accounts[data.account.Idaccount] = data;
     }
     public AccountData GetAccountData(int accountId)
     {

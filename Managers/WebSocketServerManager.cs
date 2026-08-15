@@ -1,12 +1,8 @@
 ﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
-using System.Net.Http;
 using System.Net.WebSockets;
-using System.Threading;
-using System.Threading.Tasks;
+using HSO_Server.Models;
 
 public sealed class ClientConnection
 {
@@ -163,8 +159,9 @@ public class WebSocketServerManager
                 {
                     //những data khác đã có sẵn khi load API rồi
                     mobData.mobsAI = new MobController(mobData.posX, mobData.posY, 6, 6);
-                    mobData.damage = mobData.mob.Level * 10;
-                    mobData.hp = mobData.mob.HP;
+                    int level = mobData.mob.Level ?? 1;
+                    mobData.damage = level * 10;
+                    mobData.hp = mobData.mob.Hp ?? 0;
 
                     CacheManager.Instance.AddMob(mobData);
                 }
@@ -407,7 +404,7 @@ public class WebSocketServerManager
                                 {
                                     await Task.Delay(3000);
 
-                                    mob.hp = mob.mob.HP;
+                                    mob.hp = mob.mob.Hp ?? 0;
                                     mob.mobsAI.Respawn();
                                     mob.isRespawning = false;
                                 });
@@ -489,10 +486,10 @@ public class WebSocketServerManager
                         var currentTile = astar.GetTileType(map, mob.mobsAI.GetCurrentPosition().X, mob.mobsAI.GetCurrentPosition().Y);
 
                         writer.WriteInt(mob.id);
-                        writer.WriteInt(mob.mob.IDMob);
-                        writer.WriteInt(mob.mob.HP);
+                        writer.WriteInt(mob.mob.Idmob);
+                        writer.WriteInt(mob.mob.Hp ?? 0);
                         writer.WriteInt(currentHPMob);
-                        writer.WriteInt(mob.mob.Level);
+                        writer.WriteInt(mob.mob.Level ?? 1);
                         writer.WriteFloat(mob.mobsAI.GetCurrentPosition().X);
                         writer.WriteFloat(mob.mobsAI.GetCurrentPosition().Y);
                         writer.WriteInt((int)mob.mobsAI.GetState());
