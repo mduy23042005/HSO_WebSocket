@@ -361,7 +361,7 @@ public class WebSocketServerManager
     }
     private async Task UpdateMobsLoop()
     {
-        const int targetTickRate = 20;
+        const int targetTickRate = 30;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new Stopwatch();
@@ -372,19 +372,18 @@ public class WebSocketServerManager
             try
             {
                 float deltaTime = 1f / targetTickRate;
-
                 for (int i = 1; i <= CacheManager.Instance.GetCountInitedMap(); i = i + 1)
                 {
                     var map = CacheManager.Instance.GetMap(i);
 
                     if (map == null || map.mobsData == null)
                         continue;
+
                     var mobs = map.mobsData;
 
                     foreach (var mob in mobs)
                     {
                         var hpMob = CacheManager.Instance.GetMob(mob.id).hp;
-
                         if (hpMob > 0)
                         {
                             mob.mobsAI.Attack(deltaTime, map, mob.damage);
@@ -502,7 +501,7 @@ public class WebSocketServerManager
                     // gửi chỉ cho client trong map này
                     foreach (var client in clientsInMap)
                     {
-                        _ = RaceManager.Instance.SendPacketToClient(client, packet);
+                        await RaceManager.Instance.SendPacketToClient(client, packet);
                     }
                 }
             }
@@ -610,7 +609,7 @@ public class WebSocketServerManager
 
                     foreach (var client in clientsInMap)
                     {
-                        _ = RaceManager.Instance.SendPacketToClient(client, packet);
+                        await RaceManager.Instance.SendPacketToClient(client, packet);
                     }
                 }
             }

@@ -187,6 +187,11 @@ public class ReadAttributesController
             inventoryItem0Data.item0_Attributes = tempEquipmentItem.item0_Attributes;
             inventoryItem0Data.nameAttributes = tempEquipmentItem.nameAttributes;
 
+            accountData.playerData.weapon = accountData.equipments[0].idItem0_1;
+            accountData.playerData.helmet = accountData.equipments[1].idItem0_1;
+            accountData.playerData.armor = accountData.equipments[2].idItem0_1;
+            accountData.playerData.legArmor = accountData.equipments[3].idItem0_1;
+
             await equipmentController.ReadCacheEquipment(client);
             await inventoryController.ReadCacheInventory(client);
 
