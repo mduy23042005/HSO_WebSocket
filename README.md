@@ -98,6 +98,8 @@ This project was developed to:
 - WebSocket
 - RESTful API
 - HTTP
+- Binary packet communication
+- JSON
 
 ## Database
 
@@ -400,6 +402,8 @@ The same architecture is used for other persistent game data operations.
 - Security improvements.
 - Authentication and authorization improvements.
 - Logging and monitoring improvements.
+
+---
 
 # License
 
