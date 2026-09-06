@@ -115,7 +115,6 @@ public class LogInController
         writer.WriteBool(loginResult.success);
         writer.WriteInt(loginResult.idAccount);
         writer.WriteInt(loginResult.idSchool);
-        writer.WriteString(loginResult.nameChar);
         writer.WriteInt(loginResult.hair);
         writer.WriteInt(loginResult.level);
         writer.WriteInt(loginResult.maxHP);
@@ -124,10 +123,13 @@ public class LogInController
         writer.WriteInt(loginResult.mp);
         writer.WriteString(loginResult.message);
 
-        EquipmentController equipmentController = new EquipmentController();
-        await equipmentController.ReadCacheEquipment(client);
-        InventoryController inventoryController = new InventoryController();
-        await inventoryController.ReadCacheInventory(client);
+        if (acc != null)
+        {
+            EquipmentController equipmentController = new EquipmentController();
+            await equipmentController.ReadCacheEquipment(client);
+            InventoryController inventoryController = new InventoryController();
+            await inventoryController.ReadCacheInventory(client);
+        }
 
         await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
     }

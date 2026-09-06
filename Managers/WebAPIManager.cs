@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Azure;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -18,15 +19,16 @@ public class WebAPIManager
         return client;
     }
 
-    public async Task InitAPI()
+    public async Task<bool> InitAPI()
     {
         try
         {
             HttpResponseMessage response = await client.GetAsync(apiUrl);
+            return true;
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine(" " + ex.Message);
+            return false;
         }
     }
 
@@ -66,5 +68,4 @@ public class WebAPIManager
             return null;
         }
     }
-
 }

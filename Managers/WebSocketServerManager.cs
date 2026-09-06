@@ -1,8 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿using HSO_Server.Models;
+using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Net.WebSockets;
-using HSO_Server.Models;
 
 public sealed class ClientConnection
 {
@@ -25,14 +26,16 @@ public class WebSocketServerManager
     private volatile bool isShuttingDown = false;
     private TimeZoneInfo vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
     private DateTime time;
-    private readonly Dictionary<int, List<ClientConnection>> mapPlayersForSyncPlayers = new Dictionary<int, List<ClientConnection>>();
-    private readonly Dictionary<int, List<ClientConnection>> mapPlayersForSyncMobs = new Dictionary<int, List<ClientConnection>>();
+
+    private Dictionary<int, List<ClientConnection>> mapPlayers = new Dictionary<int, List<ClientConnection>>();
     private AStarManager astar = new AStarManager();
 
     public static void Main(string[] args)
     {
         WebSocketServerManager server = new WebSocketServerManager();
-        Console.WriteLine("Starting Web Socket Server...");
+        Console.WriteLine("------------------------------");
+        Console.WriteLine("| Starting Web Socket Server |");
+        Console.WriteLine("------------------------------");
         server.RunWebSocketServer().GetAwaiter().GetResult();
     }
 
@@ -41,14 +44,23 @@ public class WebSocketServerManager
         try
         {
             //Khởi động Web API
-            await WebAPIManager.Instance.InitAPI();
+            bool isAPIConnected = await WebAPIManager.Instance.InitAPI();
+
+            if (!isAPIConnected)
+            {
+                time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+                Console.WriteLine($"[Server] {time:hh:mm:ss tt} Connected to Web API failed! Web Socket Server stopped.");
+                return;
+            }
+
             time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
-            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Connected to Web API successfully! (http://localhost:55555)");
+            Console.WriteLine($"[Server] {time:hh:mm:ss tt} Connected to Web API successfully! (http://localhost:55555)");
 
             //Kiểm tra port lắng nghe
             ListenToPort(55556);
+            string serverIP = Dns.GetHostEntry(Dns.GetHostName()).AddressList.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork)?.ToString() ?? "Unknown";
             time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
-            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Started Web Socket Server port: 55556 successfully!");
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Started Web Socket Server at: {serverIP}:55556 successfully!");
 
             //Khởi động Cleanup Loop để dọn dẹp client ngắt kết nối thụ động
             _ = Task.Run(() => InitCleanupLoop(shutdownCts.Token));
@@ -65,15 +77,19 @@ public class WebSocketServerManager
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loading data...");
             await LoadData();
 
-            _ = Task.Run(() => UpdateMobsLoop());
-            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} UpdateMobs loop started.");
+            _ = Task.Run(UpdateMobsLoop);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Initialized UpdateMobs loop successfully!");
 
-            _ = Task.Run(() => SyncMobsLoop());
-            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} SyncMobs loop started.");
+            _ = Task.Run(UpdateMapPlayersLoop);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Initialized UpdateMapPlayers loop successfully!");
 
-            _ = Task.Run(() => SyncOtherPlayersLoop());
-            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} SyncOtherPlayers loop started.");
+            _ = Task.Run(SyncMobsLoop);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Initialized SyncMobs loop successfully!");
+
+            _ = Task.Run(SyncOtherPlayersLoop);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Initialized SyncOtherPlayers loop successfully!");
             
+            _ = Task.Run(CountOnlinePlayers);
             _ = Task.Run(ListenForQuit);
 
             //Chấp nhận kết nối từ client
@@ -361,7 +377,7 @@ public class WebSocketServerManager
     }
     private async Task UpdateMobsLoop()
     {
-        const int targetTickRate = 30;
+        const int targetTickRate = 10;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new Stopwatch();
@@ -427,9 +443,9 @@ public class WebSocketServerManager
                 await Task.Delay(sleep, shutdownCts.Token);
         }
     }
-    private async Task SyncMobsLoop()
+    private async Task UpdateMapPlayersLoop()
     {
-        const int targetTickRate = 30;
+        const int targetTickRate = 1;
         const int tickMS = 1000 / targetTickRate;
 
         var stopwatch = new Stopwatch();
@@ -439,33 +455,70 @@ public class WebSocketServerManager
             stopwatch.Restart();
             try
             {
-                mapPlayersForSyncMobs.Clear();
+                var snapshot = new Dictionary<int, List<ClientConnection>>();
 
                 var clients = RaceManager.Instance.GetAllClients();
 
                 foreach (var client in clients)
                 {
-                    //kiểm tra player có hợp lệ không
                     int idAccount = RaceManager.Instance.GetIDAccount(client);
-                    if (idAccount <= 0) 
+                    if (idAccount <= 0)
                         continue;
 
                     var accountData = CacheManager.Instance.GetAccountData(idAccount);
-                    if (accountData?.playerTransformData == null) 
+                    if (accountData?.playerTransformData == null)
                         continue;
 
-                    //thêm player vào map
                     int idMap = CacheManager.Instance.GetClientMapID(accountData.playerData.nameMap);
 
-                    if (!mapPlayersForSyncMobs.ContainsKey(idMap))
+                    if (!snapshot.ContainsKey(idMap))
                     {
-                        mapPlayersForSyncMobs[idMap] = new List<ClientConnection>();
+                        snapshot[idMap] = new List<ClientConnection>();
                     }
 
-                    mapPlayersForSyncMobs[idMap].Add(client);
+                    snapshot[idMap].Add(client);
                 }
 
-                foreach (var kv in mapPlayersForSyncMobs)
+                lock (mapPlayers)
+                {
+                    mapPlayers = snapshot;
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Server] Update Map Players error: " + ex.Message);
+            }
+
+            stopwatch.Stop();
+            int sleep = tickMS - (int)stopwatch.ElapsedMilliseconds;
+            if (sleep > 0)
+                await Task.Delay(sleep, shutdownCts.Token);
+        }
+    }
+    private async Task SyncMobsLoop()
+    {
+        const int targetTickRate = 10;
+        const int tickMS = 1000 / targetTickRate;
+
+        var stopwatch = new Stopwatch();
+
+        while (!shutdownCts.IsCancellationRequested)
+        {
+            stopwatch.Restart();
+            try
+            {
+                var snapshot = new Dictionary<int, List<ClientConnection>>();
+
+                lock (mapPlayers)
+                {
+                    snapshot = mapPlayers;
+                }
+
+                foreach (var kv in snapshot)
                 {
                     int mapId = kv.Key;
                     var clientsInMap = kv.Value;
@@ -533,32 +586,14 @@ public class WebSocketServerManager
 
             try
             {
-                mapPlayersForSyncPlayers.Clear();
+                var snapshot = new Dictionary<int, List<ClientConnection>>();
 
-                var clients = RaceManager.Instance.GetAllClients();
-
-                foreach (var client in clients)
+                lock (mapPlayers)
                 {
-                    int idAccount = RaceManager.Instance.GetIDAccount(client);
-                    if (idAccount <= 0)
-                        continue;
-
-                    var accountData = CacheManager.Instance.GetAccountData(idAccount);
-
-                    if (accountData == null || accountData.playerData == null || accountData.playerTransformData == null || accountData.playerStateData == null)
-                        continue;
-
-                    int idMap = CacheManager.Instance.GetClientMapID(accountData.playerData.nameMap);
-
-                    if (!mapPlayersForSyncPlayers.ContainsKey(idMap))
-                    {
-                        mapPlayersForSyncPlayers[idMap] = new List<ClientConnection>();
-                    }
-
-                    mapPlayersForSyncPlayers[idMap].Add(client);
+                    snapshot = mapPlayers;
                 }
 
-                foreach (var kv in mapPlayersForSyncPlayers)
+                foreach (var kv in snapshot)
                 {
                     var clientsInMap = kv.Value;
                     if (clientsInMap.Count <= 0) 
@@ -657,6 +692,30 @@ public class WebSocketServerManager
                     Console.WriteLine("Cancel shutdown.");
                 }
             }
+        }
+    }
+    private async Task CountOnlinePlayers()
+    {
+        while (!shutdownCts.IsCancellationRequested)
+        {
+            var clients = RaceManager.Instance.GetAllClients();
+
+            var onlinePlayers = new List<int>();
+
+            foreach (var client in clients)
+            {
+                int idAccount = RaceManager.Instance.GetIDAccount(client);
+
+                if (idAccount > 0)
+                {
+                    onlinePlayers.Add(idAccount);
+                }
+            }
+
+            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Online players: [{onlinePlayers.Count}]");
+
+            await Task.Delay(10000, shutdownCts.Token);
         }
     }
     private void ShutdownServer()
