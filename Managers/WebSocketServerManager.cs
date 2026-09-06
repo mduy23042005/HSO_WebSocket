@@ -425,7 +425,7 @@ public class WebSocketServerManager
                                 });
                             }
                         }
-                    }                
+                    }
                 }
             }
             catch (TaskCanceledException)

@@ -25,11 +25,28 @@ public class MapData
 
     public byte[,] tiles;
 }
+
 public class MapController
 {
     public void InitMap(MapData mapData)
     {
-        string path = $"D:/Unity project/HSO_Server/Maps/{mapData.map.Idmap}.bin";
+        string? path = AppContext.BaseDirectory;
+
+        while (path != null)
+        {
+            // Kiểm tra xem thư mục Maps có tồn tại trong cấp hiện tại không
+            if (Directory.Exists(Path.Combine(path, "Maps")))
+            {
+                path = Path.Combine(path, "Maps", $"{mapData.map.Idmap}.bin");
+                break;
+            }
+
+            // Đi ngược lên thư mục cha
+            if (Directory.GetParent(path) == null) 
+                break;
+
+            path = Directory.GetParent(path)?.FullName;
+        }
 
         if (!File.Exists(path))
         {
