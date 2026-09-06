@@ -554,7 +554,14 @@ public class WebSocketServerManager
                     // gửi chỉ cho client trong map này
                     foreach (var client in clientsInMap)
                     {
-                        await RaceManager.Instance.SendPacketToClient(client, packet);
+                        try
+                        {
+                            await RaceManager.Instance.SendPacketToClient(client, packet);
+                        }
+                        catch (Exception ex)
+                        {
+                            RaceManager.Instance.MarkLogOut(client);
+                        }
                     }
                 }
             }
@@ -644,7 +651,14 @@ public class WebSocketServerManager
 
                     foreach (var client in clientsInMap)
                     {
-                        await RaceManager.Instance.SendPacketToClient(client, packet);
+                        try
+                        {
+                            await RaceManager.Instance.SendPacketToClient(client, packet);
+                        }
+                        catch (Exception ex)
+                        {
+                            RaceManager.Instance.MarkLogOut(client);
+                        }
                     }
                 }
             }
