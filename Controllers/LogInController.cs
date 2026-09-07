@@ -45,6 +45,8 @@ public class LogInController
         string json = await res.Content.ReadAsStringAsync();
         var acc = JsonConvert.DeserializeObject<Account>(json);
 
+        PacketWriterManager writer;
+
         if (acc != null)
         {
             if (CacheManager.Instance.IsAccountOnline(acc.Idaccount))
@@ -64,6 +66,23 @@ public class LogInController
                     mp = 0,
                     message = $"Tài khoản {acc.NameChar} đang online."
                 };
+
+                writer = new PacketWriterManager();
+                writer.WriteInt((int)loginResult.cmd);
+                writer.WriteBool(loginResult.success);
+                writer.WriteInt(loginResult.idAccount);
+                writer.WriteInt(loginResult.idSchool);
+                writer.WriteInt(loginResult.hair);
+                writer.WriteInt(loginResult.level);
+                writer.WriteInt(loginResult.maxHP);
+                writer.WriteInt(loginResult.maxMP);
+                writer.WriteInt(loginResult.hp);
+                writer.WriteInt(loginResult.mp);
+                writer.WriteString(loginResult.message);
+
+                await RaceManager.Instance.SendPacketToClient(client, writer.ToArray());
+
+                return;
             }
             else
             {
@@ -110,7 +129,7 @@ public class LogInController
             };
         }
 
-        PacketWriterManager writer = new PacketWriterManager();
+        writer = new PacketWriterManager();
         writer.WriteInt((int)loginResult.cmd);
         writer.WriteBool(loginResult.success);
         writer.WriteInt(loginResult.idAccount);

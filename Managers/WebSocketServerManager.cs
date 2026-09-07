@@ -1,4 +1,5 @@
 ﻿using HSO_Server.Models;
+using Microsoft.EntityFrameworkCore.Update.Internal;
 using Newtonsoft.Json;
 using System.Diagnostics;
 using System.Net;
@@ -140,10 +141,9 @@ public class WebSocketServerManager
             }
         }
         time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
-        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Inited Map data successfully! [{CacheManager.Instance.GetCountInitedMap()}]");
-
-        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
         Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Loaded Map data successfully! [{CacheManager.Instance.GetCountMap()}]");
+        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Initialized Map data successfully! [{CacheManager.Instance.GetCountInitedMap()}]");
         #endregion
 
         #region Load NPC
@@ -373,6 +373,13 @@ public class WebSocketServerManager
             {
                 RaceManager.Instance.MarkLogOut(client);
             }
+            lock (mapPlayers)
+            {
+                foreach (var list in mapPlayers.Values)
+                {
+                    list.Remove(client);
+                }
+            }
         }
     }
     private async Task UpdateMobsLoop()
@@ -526,13 +533,12 @@ public class WebSocketServerManager
                     var map = CacheManager.Instance.GetMap(mapId);
                     if (map == null || map.mobsData == null)
                         continue;
-                    var mobs = map.mobsData;
+                    var mobsInMap = map.mobsData;
 
                     PacketWriterManager writer = new PacketWriterManager();
                     writer.WriteInt((int)EnumCmdCode.syncMobsData);
-                    writer.WriteInt(mobs.Count);
-
-                    foreach (var mob in mobs)
+                    writer.WriteInt(mobsInMap.Count);
+                    foreach (var mob in mobsInMap)
                     {
                         var currentHPMob = CacheManager.Instance.GetMob(mob.id).hp;
                         var currentTile = astar.GetTileType(map, mob.mobsAI.GetCurrentPosition().X, mob.mobsAI.GetCurrentPosition().Y);
@@ -558,10 +564,7 @@ public class WebSocketServerManager
                         {
                             await RaceManager.Instance.SendPacketToClient(client, packet);
                         }
-                        catch (Exception ex)
-                        {
-                            RaceManager.Instance.MarkLogOut(client);
-                        }
+                        catch { }
                     }
                 }
             }
@@ -613,7 +616,6 @@ public class WebSocketServerManager
                     foreach (var client in clientsInMap)
                     {
                         int idAccount = RaceManager.Instance.GetIDAccount(client);
-
                         if (idAccount <= 0)
                             continue;
 
@@ -655,10 +657,7 @@ public class WebSocketServerManager
                         {
                             await RaceManager.Instance.SendPacketToClient(client, packet);
                         }
-                        catch (Exception ex)
-                        {
-                            RaceManager.Instance.MarkLogOut(client);
-                        }
+                        catch { }
                     }
                 }
             }
@@ -729,7 +728,7 @@ public class WebSocketServerManager
             time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
             Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Online players: [{onlinePlayers.Count}]");
 
-            await Task.Delay(10000, shutdownCts.Token);
+            await Task.Delay(20000, shutdownCts.Token);
         }
     }
     private void ShutdownServer()
@@ -776,11 +775,6 @@ public class WebSocketServerManager
                     var loginController = new LogInController();
                     await loginController.ClickLogIn(client, loginPacket);
                     break;
-
-                case EnumCmdCode.logout:
-                    await RaceManager.Instance.SendPacketToClient(client, data);
-                    RaceManager.Instance.ForceLogout(client);
-                    return;
 
                 case EnumCmdCode.register:
                     Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Received register request from client: {client.ipRemote}.");

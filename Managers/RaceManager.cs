@@ -215,38 +215,6 @@ public sealed class RaceManager
         }
     }
 
-    // dọn dẹp client ngắt kết nối chủ động
-    public void ForceLogout(ClientConnection client)
-    {
-        if (client == null) return;
-
-        int idAccount = GetIDAccount(client);
-        string nameAccount = CacheManager.Instance.GetAllAccountData().TryGetValue(idAccount, out var value) ? value.account.NameChar : null;
-
-        if (idAccount != 0)
-        {
-            CacheManager.Instance.RemoveAccountData(idAccount);
-
-            time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
-            Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Goodbye {nameAccount}.");
-        }
-
-        try
-        {
-            if (client.socket.State == WebSocketState.Open)
-            {
-                client.socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Logout", CancellationToken.None).Wait();
-            }
-        }
-        catch { }
-
-        UnregisterClient(client);
-        client.socket.Dispose();
-
-        time = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
-        Console.WriteLine($"[Server] {time.ToString("hh:mm:ss tt")} Closed socket: {client.ipRemote}.");
-    }
-
     public List<ClientConnection> GetAllClients()
     {
         lock (clientCollectionLock)
